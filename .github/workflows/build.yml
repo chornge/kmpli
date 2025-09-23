@@ -25,7 +25,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build
-        run: ./gradlew build installDist
+        run: gradlew build installDist
 
       - name: Tests
-        run: ./gradlew test
+        run: gradlew test
