@@ -20,27 +20,37 @@ import java.util.zip.ZipInputStream
 class Kmpli : CliktCommand() {
     private val name: String? by option("-n", "--name", help = "Project name").default("KotlinProject")
     private val pid: String? by option("-p", "--pid", help = "Project ID").default("org.example.project")
-    private val android: Boolean by option("-a", "--android", help = "Include Android").flag(default = true)
-    private val ios: Boolean by option("-i", "--ios", help = "Include iOS").flag(default = true)
+    private val android: Boolean? by option("-a", "--android", help = "Include Android").flag()
+    private val ios: Boolean? by option("-i", "--ios", help = "Include iOS").flag()
     private val iosui: String? by option("-iu", "--ios-ui", help = "iOS UI framework").default("compose")
-    private val desktop: Boolean by option("-d", "--desktop", help = "Include Desktop").flag(default = false)
-    private val web: Boolean by option("-w", "--web", help = "Include Web").flag(default = false)
+    private val desktop: Boolean? by option("-d", "--desktop", help = "Include Desktop").flag()
+    private val web: Boolean? by option("-w", "--web", help = "Include Web").flag()
     private val webui: String? by option("-wu", "--web-ui", help = "Web UI framework").default("compose")
-    private val server: Boolean by option("-s", "--server", help = "Include Server").flag(default = false)
+    private val server: Boolean? by option("-s", "--server", help = "Include Server").flag()
     private val tests: Boolean by option("-t", "--tests", help = "Include Tests").flag(default = false)
 
     override fun run() = runBlocking {
+        val platformFlags = listOf(android, ios, desktop, web, server)
+        val anyPlatformSpecified = platformFlags.any { it != null }
+
+        // Apply default if none were specified
+        val useAndroid = android ?: !anyPlatformSpecified
+        val useIos = ios ?: !anyPlatformSpecified
+        val useDesktop = desktop ?: false
+        val useWeb = web ?: false
+        val useServer = server ?: false
+
         val url = buildUrl(
             name = name ?: "KotlinProject",
             id = pid ?: "org.example.project",
-            android,
-            ios,
-            iosui ?: "compose",
-            desktop,
-            web,
-            webui ?: "compose",
-            server,
-            tests
+            android = useAndroid,
+            ios = useIos,
+            iosui = iosui,
+            desktop = useDesktop,
+            web = useWeb,
+            webui = webui,
+            server = useServer,
+            tests = tests
         )
         val zipFile = downloadZip(url)
         val extractedDir = extractZip(zipFile, name ?: "KotlinProject")
@@ -52,39 +62,39 @@ class Kmpli : CliktCommand() {
     }
 
     fun buildUrl(
-        name: String? = "KotlinProject",
-        id: String? = "org.example.project",
-        android: Boolean? = true,
-        ios: Boolean? = true,
+        name: String,
+        id: String,
+        android: Boolean,
+        ios: Boolean,
         iosui: String?,
-        desktop: Boolean?,
-        web: Boolean?,
+        desktop: Boolean,
+        web: Boolean,
         webui: String?,
-        server: Boolean?,
-        tests: Boolean? = false
+        server: Boolean,
+        tests: Boolean
     ): String {
         val targets = buildJsonObject {
-            if (android == true) {
+            if (android) {
                 put("android", buildJsonObject {
                     put("ui", JsonArray(listOf(JsonPrimitive("compose"))))
                 })
             }
-            if (ios == true) {
+            if (ios) {
                 put("ios", buildJsonObject {
                     put("ui", JsonArray(listOf(JsonPrimitive(iosui))))
                 })
             }
-            if (desktop == true) {
+            if (desktop) {
                 put("desktop", buildJsonObject {
                     put("ui", JsonArray(listOf(JsonPrimitive("compose"))))
                 })
             }
-            if (web == true) {
+            if (web) {
                 put("web", buildJsonObject {
                     put("ui", JsonArray(listOf(JsonPrimitive(webui))))
                 })
             }
-            if (server == true) {
+            if (server) {
                 put("server", buildJsonObject {
                     put("engine", JsonArray(listOf(JsonPrimitive("ktor"))))
                 })
@@ -94,7 +104,7 @@ class Kmpli : CliktCommand() {
         val spec = buildJsonObject {
             put("template_id", JsonPrimitive("kmt"))
             put("targets", targets)
-            if (tests == true) {
+            if (tests) {
                 put("include_tests", JsonPrimitive(true))
             }
         }
