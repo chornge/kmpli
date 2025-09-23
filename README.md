@@ -52,16 +52,16 @@ Include all targets (IOS with SwiftUI, Web with React). Include tests:
 ./kmpli --name “CMPProject" --pid “io.chornge.cmpproject" --android --ios "swiftui" --desktop --web "react" --server --tests
 ```
 
-OR using short options (same as above):
+OR using short options (exact same as above):
 
 ```
-./kompli -n "CMPProject" -p "io.chornge.cmpproject" -a -i "swiftui" -d -w "react" -t
+./kmpli -n "CMPProject" -p "io.chornge.cmpproject" -a -i "swiftui" -d -w "react" -t
 ```
 
 Include only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
 
 ```
-./kompli -n "CMPProject" -p "io.chornge.cmpproject" -i -d -w -s
+./kmpli -n "CMPProject" -p "io.chornge.cmpproject" -ios -desktop -web -server
 ```
 
 ### License
