@@ -19,7 +19,7 @@ Clone repository & build project using gradle:
 ```
 git clone https://github.com/chornge/kmpli.git
 cd kmpli
-./gradlew build installDist
+gradle build installDist
 ```
 
 ### Usage
