@@ -61,7 +61,7 @@ OR using short options (exact same as above):
 Include only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
 
 ```
-./kmpli -n "CMPProject" -p "io.chornge.cmpproject" -ios -desktop -web -server
+./kmpli --name "CMPProject" --pid "io.chornge.cmpproject" --ios --desktop --web --server
 ```
 
 ### License
