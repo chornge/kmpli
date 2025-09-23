@@ -19,7 +19,7 @@ Clone repository & build project using gradle:
 ```
 git clone https://github.com/chornge/kmpli.git
 cd kmpli
-./gradlew build
+./gradlew installDist
 ```
 
 ### Usage
@@ -43,7 +43,7 @@ The default targets are Android & IOS (Compose UI framework) excluding tests.
  -wu    --webui TEXT    Web UI framework (default: compose)
  -s     --server        Include Server (default: false)
  -t     --tests         Include Tests (default: false)
- -h,    --help          Show help menu
+ -h,    --help          Show this message and exit
 ```
 
 Include all targets (IOS with SwiftUI, Web with React). Include tests:
