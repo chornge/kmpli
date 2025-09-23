@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClass.set("io.chornge.kmpli.src.main.kotlin.KmpliKt.main")
+    mainClass.set("KmpliKt")
 }
 
 group = "io.chornge.kmpli"
