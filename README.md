@@ -10,7 +10,7 @@ test setups.
 
 ### Requirements
 
-Kotlin and Compose Multiplatform development environment set up (JDK/IntelliJ/Gradle).
+Kotlin and Compose Multiplatform development environment set up (JDK-17 and Gradle).
 
 ### Installation
 
