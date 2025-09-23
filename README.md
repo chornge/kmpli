@@ -1,3 +1,5 @@
+![CI/CD](https://github.com/chornge/kmpli/actions/workflows/build.yml/badge.svg?branch=main)
+
 # Kmpli
 
 Pronounced `"Comply"`
