@@ -35,12 +35,18 @@ Navigate to the directory where you want to create the project and run:
 #### Usage Options
 
 ```
- --name TEXT        Project name (default: KotlinProject)
- --pid TEXT         Project ID (default: org.example.project)
- --platforms TEXT   Comma-separated platforms (android,ios(swiftui),
-                    web(react),desktop,server)
- --include-tests    Include Tests (default: false if a platform is specified)
- -h, --help         Show this message and exit
+  --name TEXT       Project name
+  --pid TEXT        Project ID
+  --template TEXT   Project template name
+                    shared-ui → Shared UI Multiplatform App (Compose)
+                    native-ui → Native UI Multiplatform App (Compose + SwiftUI) 
+                    library → Bare-bones Multiplatform Library
+                    shared-ui-amper → Shared UI Multiplatform App (configured with Amper)
+                    native-ui-amper → Native UI Multiplatform App (configured with Amper)
+  --platforms TEXT  Comma-separated platforms
+                    android,ios(swiftui),web(react),desktop,server
+  --include-tests   Include Tests (false if a platform is specified)
+  -h, --help        Show this message and exit
 ```
 
 Examples (platforms or template):
@@ -80,5 +86,5 @@ Contributions are welcome! Please fork the repository and create a pull request 
 
 ### Acknowledgments
 
-- Inspired by a need to create Kotlin/Compose Multiplatform projects without a GUI or using the website's interface.
+- Inspired by a need to create Kotlin/Compose Multiplatform projects without the need for a GUI.
 - Thanks to the Kotlin and Compose Multiplatform communities for the support and for the resources.
