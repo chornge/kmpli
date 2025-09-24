@@ -24,13 +24,14 @@ gradle build installDist
 
 ### Usage
 
+The default targets are Android & IOS (Compose UI framework) including tests.
+To generate a new project, navigate to the directory where you want to create the project and run:
+
 ```
 ./kmpli
 ```
 
 #### Usage Options
-
-The default targets are Android & IOS (Compose UI framework) excluding tests.
 
 ```
  -n     --name TEXT     Project name (default: KotlinProject)
@@ -46,19 +47,19 @@ The default targets are Android & IOS (Compose UI framework) excluding tests.
  -h,    --help          Show this message and exit
 ```
 
-Include all targets (IOS with SwiftUI, Web with React). Include tests:
+Examples:
 
 ```
-./kmpli --name “CMPProject" --pid “io.chornge.cmpproject" --android --ios "swiftui" --desktop --web "react" --server --tests
+./kmpli --name "CMPProject" --pid "io.chornge.cmpproject" --android --ios --ios-ui "swiftui" --desktop --web --web-ui "react" --server --tests
 ```
 
 OR using short options (exact same as above):
 
 ```
-./kmpli -n "CMPProject" -p "io.chornge.cmpproject" -a -i "swiftui" -d -w "react" -t
+./kmpli -n "CMPProject" -p "io.chornge.cmpproject" -a -i -iu "swiftui" -d -w -wu "react" -s -t
 ```
 
-Include only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
+Generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
 
 ```
 ./kmpli --name "CMPProject" --pid "io.chornge.cmpproject" --ios --desktop --web --server
