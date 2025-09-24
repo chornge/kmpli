@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ $# -eq 0 ]; then
-  ./build/install/kmpli/bin/kmpli --android --ios
+  ./build/install/kmpli/bin/kmpli --android --ios --tests
 else
   ./build/install/kmpli/bin/kmpli "$@"
 fi
