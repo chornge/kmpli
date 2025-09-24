@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.readBytes
+import io.ktor.client.statement.readRawBytes
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -118,7 +119,7 @@ class Kmpli : CliktCommand() {
 
     private suspend fun downloadZip(url: String): File {
         val client = HttpClient()
-        val response: ByteArray = client.get(url).readBytes()
+        val response: ByteArray = client.get(url).readRawBytes()
         val zipFile = File("cmpproject.zip")
         zipFile.writeBytes(response)
         return zipFile
