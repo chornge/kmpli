@@ -25,8 +25,7 @@ gradle clean build installDist
 
 ### Usage
 
-To generate Android & IOS (Compose UI) targets with tests (default behavior on kmp.jetbrains.com),
-Navigate to the directory where you want to create the project and run:
+To generate Android & IOS (Compose UI) targets with tests (default behavior on kmp.jetbrains.com), run:
 
 ```
 ./kmpli
@@ -37,13 +36,13 @@ Navigate to the directory where you want to create the project and run:
 ```
   --name TEXT       Project name
   --pid TEXT        Project ID
-  --template TEXT   Project template name
-                    shared-ui → Shared UI Multiplatform App (Compose)
-                    native-ui → Native UI Multiplatform App (Compose + SwiftUI) 
+  --template TEXT   Multiplatform template
+                    shared-ui → Shared UI App (Compose)
+                    native-ui → Native UI App (Compose + SwiftUI) 
                     library → Bare-bones Multiplatform Library
-                    shared-ui-amper → Shared UI Multiplatform App (configured with Amper)
-                    native-ui-amper → Native UI Multiplatform App (configured with Amper)
-  --platforms TEXT  Comma-separated platforms
+                    shared-ui-amper → Shared UI App (configured with Amper)
+                    native-ui-amper → Native UI App (configured with Amper)
+  --platforms TEXT  Target platform(s)
                     android,ios(swiftui),web(react),desktop,server
   --include-tests   Include Tests (false if a platform is specified)
   -h, --help        Show this message and exit
