@@ -1,4 +1,3 @@
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -100,6 +99,7 @@ class KmpliTest {
         assertFalse(updatedContent.contains("org.example.project"))
 
         // Clean up
-        // assertFalse(testDir.exists())
+        testFile.delete()
+        assertFalse(testFile.exists())
     }
 }
