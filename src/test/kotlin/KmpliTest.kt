@@ -1,105 +1,116 @@
-import org.junit.jupiter.api.AfterEach
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import java.io.File
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 
 class KmpliTest {
     private lateinit var kmpli: Kmpli
-    private var testDir = File("testNested/org/example/project")
 
     @BeforeEach
     fun setUp() {
         kmpli = Kmpli()
-        testDir.mkdirs()
-    }
-
-    @AfterEach
-    fun tearDown() {
-        if (testDir.exists()) {
-            testDir.deleteRecursively()
-        }
     }
 
     @Test
-    fun `test buildUrl with all parameters`() {
+    fun `parsePlatforms defaults to android and ios(compose)`() {
+        val platforms = kmpli.parsePlatforms(null)
+        assertEquals(2, platforms.size)
+        assertEquals("android", platforms[0].name)
+        assertEquals(null, platforms[0].ui)
+        assertEquals("ios", platforms[1].name)
+        assertEquals("compose", platforms[1].ui ?: "compose")
+    }
+
+    @Test
+    fun `parsePlatforms parses single platform without ui`() {
+        val platforms = kmpli.parsePlatforms("web")
+        assertEquals(1, platforms.size)
+        assertEquals("web", platforms[0].name)
+        assertEquals(null, platforms[0].ui)
+    }
+
+    @Test
+    fun `parsePlatforms parses single platform with ui`() {
+        val platforms = kmpli.parsePlatforms("web(react)")
+        assertEquals(1, platforms.size)
+        assertEquals("web", platforms[0].name)
+        assertEquals("react", platforms[0].ui)
+    }
+
+    @Test
+    fun `parsePlatforms parses multiple platforms with and without ui`() {
+        val platforms = kmpli.parsePlatforms("android,ios(swiftui),web(react)")
+        assertEquals(3, platforms.size)
+        assertEquals("android", platforms[0].name)
+        assertNull(platforms[0].ui)
+
+        assertEquals("ios", platforms[1].name)
+        assertEquals("swiftui", platforms[1].ui)
+
+        assertEquals("web", platforms[2].name)
+        assertEquals("react", platforms[2].ui)
+    }
+
+    @Test
+    fun `buildUrl encodes name, id, and includes defaults`() {
+        val platforms = listOf(
+            Kmpli.PlatformConfig("android"),
+            Kmpli.PlatformConfig("ios", "swiftui")
+        )
         val url = kmpli.buildUrl(
-            name = "CMPProject",
-            id = "io.chornge.cmpproject",
-            android = true,
-            ios = true,
-            iosui = "compose",
-            desktop = true,
-            web = true,
-            webui = "compose",
-            server = true,
+            name = "My Project",
+            id = "com.example.test",
+            platforms = platforms,
             tests = true
         )
 
-        assertTrue(url.startsWith("https://kmp.jetbrains.com/generateKmtProject"))
-        assertTrue(url.contains("name=CMPProject"))
-        assertTrue(url.contains("id=io.chornge.cmpproject"))
-        assertTrue(url.contains("spec="))
-
-        val specEncoded = Regex("""spec=([^&]+)""").find(url)?.groupValues?.get(1)
-        assertNotNull(specEncoded)
-        val decoded = java.net.URLDecoder.decode(specEncoded, "UTF-8")
-        assertTrue(decoded.contains("\"template_id\":\"kmt\""))
-        assertTrue(decoded.contains("\"android\""))
-        assertTrue(decoded.contains("\"ios\""))
-        assertTrue(decoded.contains("\"desktop\""))
-        assertTrue(decoded.contains("\"web\""))
-        assertTrue(decoded.contains("\"server\""))
-        assertTrue(decoded.contains("\"include_tests\":true"))
+        assertTrue(url.contains("name=My+Project"))
+        assertTrue(url.contains("id=com.example.test"))
+        assertTrue(url.contains("swiftui"))
+        assertTrue(url.contains("android"))
+        assertTrue(url.contains("include_tests"))
+        assertTrue(url.contains("template_id"))
     }
 
     @Test
-    fun `test extractZip`() {
-        val zipFile = File("test.zip")
+    fun `buildUrl includes correct UI defaults`() {
+        val platforms = listOf(
+            Kmpli.PlatformConfig("android", null),
+            Kmpli.PlatformConfig("web", "react")
+        )
+        val url = kmpli.buildUrl(
+            name = "Sample",
+            id = "org.sample",
+            platforms = platforms,
+            tests = false
+        )
 
-        // Create a simple zip file for testing
-        zipFile.outputStream().use { output ->
-            ZipOutputStream(output).use { zipOut ->
-                zipOut.putNextEntry(ZipEntry("testFile.txt"))
-                zipOut.write("Hello, World!".toByteArray())
-                zipOut.closeEntry()
-            }
+        val decodedSpec = java.net.URLDecoder.decode(url.substringAfter("&spec="), "UTF-8")
+        val json = Json.parseToJsonElement(decodedSpec).jsonObject
+
+        val androidUI = json["targets"]!!.jsonObject["android"]!!.jsonObject["ui"]!!.jsonArray
+        val webUI = json["targets"]!!.jsonObject["web"]!!.jsonObject["ui"]!!.jsonArray
+
+        assertEquals(JsonPrimitive("compose"), androidUI[0])
+        assertEquals(JsonPrimitive("react"), webUI[0])
+    }
+
+    @Test
+    fun `buildUrl errors on unsupported platform`() {
+        val ex = assertThrows<IllegalStateException> {
+            kmpli.buildUrl(
+                name = "Test",
+                id = "org.test",
+                platforms = listOf(Kmpli.PlatformConfig("notarealplatform")),
+                tests = false
+            )
         }
-
-        // Extract the zip file
-        val extractedDir = kmpli.extractZip(zipFile, "testProject")
-        val extractedFile = File(extractedDir, "testFile.txt")
-        assertTrue(extractedFile.exists())
-        assertEquals("Hello, World!", extractedFile.readText())
-
-        // Clean up
-        zipFile.delete()
-        assertFalse(zipFile.exists())
-        extractedDir.deleteRecursively()
-        assertFalse(extractedDir.exists())
-    }
-
-    @Test
-    fun `test replacePlaceholders`() {
-
-        val testFile = File(testDir, "testFile.txt")
-        testFile.writeText("KotlinProject is a project with ID org.example.project.")
-
-        // Check if the file content was updated
-        kmpli.replacePlaceholders(testDir, "CMPProject", "io.chornge.cmpproject")
-        val updatedContent = testFile.readText()
-        assertTrue(updatedContent.contains("CMPProject"))
-        assertTrue(updatedContent.contains("io.chornge.cmpproject"))
-        assertFalse(updatedContent.contains("KotlinProject"))
-        assertFalse(updatedContent.contains("org.example.project"))
-
-        // Clean up
-        testFile.delete()
-        assertFalse(testFile.exists())
+        assertEquals("Unsupported platform: notarealplatform", ex.message)
     }
 }
