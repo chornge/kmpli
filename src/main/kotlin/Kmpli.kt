@@ -17,40 +17,27 @@ import java.nio.file.StandardCopyOption
 import java.util.zip.ZipInputStream
 
 class Kmpli : CliktCommand() {
-    private val name: String? by option("-n", "--name", help = "Project name").default("KotlinProject")
-    private val pid: String? by option("-p", "--pid", help = "Project ID").default("org.example.project")
-    private val android: Boolean? by option("-a", "--android", help = "Include Android").flag()
-    private val ios: Boolean? by option("-i", "--ios", help = "Include iOS").flag()
-    private val iosui: String? by option("-iu", "--ios-ui", help = "iOS UI framework").default("compose")
-    private val desktop: Boolean? by option("-d", "--desktop", help = "Include Desktop").flag()
-    private val web: Boolean? by option("-w", "--web", help = "Include Web").flag()
-    private val webui: String? by option("-wu", "--web-ui", help = "Web UI framework").default("compose")
-    private val server: Boolean? by option("-s", "--server", help = "Include Server").flag()
-    private val tests: Boolean by option("-t", "--tests", help = "Include Tests").flag(default = false)
+    private val name: String? by option("--name", help = "Project name").default("KotlinProject")
+    private val pid: String? by option("--pid", help = "Project ID").default("org.example.project")
+
+    private val platforms: String? by option(
+        "--platforms", help = "Comma-separated platforms (android,ios(swiftui),web(react),desktop,server)"
+    )
+    private val includeTests: Boolean by option(
+        "--include-tests",
+        help = "Include Tests (false if a platform is specified)"
+    ).flag(default = false)
 
     override fun run() = runBlocking {
-        val platformFlags = listOf(android, ios, desktop, web, server)
-        val anyPlatformSpecified = platformFlags.any { it != null }
-
-        // Apply default if none were specified
-        val useAndroid = android ?: !anyPlatformSpecified
-        val useIos = ios ?: !anyPlatformSpecified
-        val useDesktop = desktop ?: false
-        val useWeb = web ?: false
-        val useServer = server ?: false
+        val parsedPlatforms = parsePlatforms(platforms)
 
         val url = buildUrl(
             name = name ?: "KotlinProject",
             id = pid ?: "org.example.project",
-            android = useAndroid,
-            ios = useIos,
-            iosui = iosui,
-            desktop = useDesktop,
-            web = useWeb,
-            webui = webui,
-            server = useServer,
-            tests = tests
+            platforms = parsedPlatforms,
+            tests = includeTests
         )
+
         val zipFile = downloadZip(url)
         val extractedDir = extractZip(zipFile, name ?: "KotlinProject")
         replacePlaceholders(extractedDir, name ?: "KotlinProject", pid ?: "org.example.project")
@@ -60,43 +47,48 @@ class Kmpli : CliktCommand() {
         }
     }
 
+    data class PlatformConfig(val name: String, val ui: String? = null)
+
+    fun parsePlatforms(input: String?): List<PlatformConfig> {
+        val raw = input?.takeIf { it.isNotBlank() } ?: "android,ios(compose)" // Default if not provided
+
+        return raw.split(",").map { part ->
+            val trimmed = part.trim()
+            val match = Regex("""(\w+)(\(([^)]+)\))?""").find(trimmed)
+            val name = match?.groups?.get(1)?.value ?: error("Invalid platform syntax: $part")
+            val ui = match.groups[3]?.value // Optional UI inside parentheses
+            PlatformConfig(name.lowercase(), ui?.lowercase())
+        }
+    }
+
     fun buildUrl(
-        name: String,
-        id: String,
-        android: Boolean,
-        ios: Boolean,
-        iosui: String?,
-        desktop: Boolean,
-        web: Boolean,
-        webui: String?,
-        server: Boolean,
-        tests: Boolean
+        name: String, id: String, platforms: List<PlatformConfig>, tests: Boolean
     ): String {
         val targets = buildJsonObject {
-            if (android) {
-                put("android", buildJsonObject {
-                    put("ui", JsonArray(listOf(JsonPrimitive("compose"))))
-                })
-            }
-            if (ios) {
-                put("ios", buildJsonObject {
-                    put("ui", JsonArray(listOf(JsonPrimitive(iosui))))
-                })
-            }
-            if (desktop) {
-                put("desktop", buildJsonObject {
-                    put("ui", JsonArray(listOf(JsonPrimitive("compose"))))
-                })
-            }
-            if (web) {
-                put("web", buildJsonObject {
-                    put("ui", JsonArray(listOf(JsonPrimitive(webui))))
-                })
-            }
-            if (server) {
-                put("server", buildJsonObject {
-                    put("engine", JsonArray(listOf(JsonPrimitive("ktor"))))
-                })
+            platforms.forEach {
+                when (it.name) {
+                    "android" -> put("android", buildJsonObject {
+                        put("ui", JsonArray(listOf(JsonPrimitive(it.ui ?: "compose"))))
+                    })
+
+                    "ios" -> put("ios", buildJsonObject {
+                        put("ui", JsonArray(listOf(JsonPrimitive(it.ui ?: "compose"))))
+                    })
+
+                    "desktop" -> put("desktop", buildJsonObject {
+                        put("ui", JsonArray(listOf(JsonPrimitive(it.ui ?: "compose"))))
+                    })
+
+                    "web" -> put("web", buildJsonObject {
+                        put("ui", JsonArray(listOf(JsonPrimitive(it.ui ?: "compose"))))
+                    })
+
+                    "server" -> put("server", buildJsonObject {
+                        put("engine", JsonArray(listOf(JsonPrimitive("ktor"))))
+                    })
+
+                    else -> error("Unsupported platform: ${it.name}")
+                }
             }
         }
 
@@ -131,7 +123,6 @@ class Kmpli : CliktCommand() {
         ZipInputStream(zipFile.inputStream()).use { zip ->
             var entry = zip.nextEntry
             while (entry != null) {
-                // Strip top-level folder (e.g., "KotlinProject/...")
                 val nameParts = entry.name.split("/", limit = 2)
                 val relativePath = if (nameParts.size > 1) nameParts[1] else nameParts[0]
 
@@ -156,10 +147,8 @@ class Kmpli : CliktCommand() {
         val oldPid = "org.example.project"
         val oldDirPath = "org/example/project"
 
-        // Rename the directory if it exists
         val oldDir = File(dir, oldDirPath)
         if (oldDir.exists()) {
-            // Convert new PID to a directory path
             val newDir = File(dir, pid.replace(".", "/"))
             oldDir.renameTo(newDir)
         }
