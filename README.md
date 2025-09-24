@@ -78,7 +78,7 @@ Generate a template with the Amper build system:
 
 ### License
 
-[MIT](LICENSE)
+[Apache 2.0](LICENSE)
 
 ### Contributing
 
