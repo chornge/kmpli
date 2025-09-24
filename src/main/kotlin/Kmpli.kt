@@ -20,11 +20,11 @@ class Kmpli : CliktCommand() {
     private val pid: String? by option("--pid", help = "Project ID")
 
     private val template: String? by option(
-        "--template", help = "Project template name:\n" + ProjectTemplate.helpText()
+        "--template", help = "Multiplatform template " + ProjectTemplate.helpText()
     )
 
     private val platforms: String? by option(
-        "--platforms", help = "Comma-separated platforms (android,ios(swiftui),web(react),desktop,server)"
+        "--platforms", help = "Target platform(s) android,ios(swiftui),web(react),desktop,server"
     )
 
     private val includeTests: Boolean by option(
@@ -220,13 +220,13 @@ sealed class ProjectTemplate(
 ) {
     object SharedUi : ProjectTemplate(
         id = "shared-ui",
-        description = "Shared UI Multiplatform App using Compose Multiplatform",
+        description = "Shared UI App (Compose)",
         url = "https://github.com/Kotlin/KMP-App-Template/archive/refs/heads/main.zip"
     )
 
     object NativeUi : ProjectTemplate(
         id = "native-ui",
-        description = "Native UI Multiplatform App using Jetpack Compose + SwiftUI",
+        description = "Native UI App (Compose + SwiftUI)",
         url = "https://github.com/Kotlin/KMP-App-Template-Native/archive/refs/heads/main.zip"
     )
 
@@ -238,13 +238,13 @@ sealed class ProjectTemplate(
 
     object SharedUiAmper : ProjectTemplate(
         id = "shared-ui-amper",
-        description = "Shared UI Multiplatform App configured with Amper",
+        description = "Shared UI App (configured with Amper)",
         url = "https://github.com/Kotlin/KMP-App-Template/archive/refs/heads/amper.zip"
     )
 
     object NativeUiAmper : ProjectTemplate(
         id = "native-ui-amper",
-        description = "Native UI Multiplatform App configured with Amper",
+        description = "Native UI App (configured with Amper)",
         url = "https://github.com/Kotlin/KMP-App-Template-Native/archive/refs/heads/amper.zip"
     )
 
@@ -257,7 +257,7 @@ sealed class ProjectTemplate(
 
         fun listTemplateIds(): List<String> = allTemplates.map { it.id }
 
-        fun helpText(): String = allTemplates.joinToString("\n") { "  ${it.id.padEnd(20)} → ${it.description}" }
+        fun helpText(): String = allTemplates.joinToString("\n\n") { "${it.id} → ${it.description}" }
     }
 }
 
