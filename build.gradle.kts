@@ -19,9 +19,9 @@ dependencies {
     implementation("com.github.ajalt.clikt:clikt:3.5.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
 
-    implementation("io.ktor:ktor-client-core:2.0.0")
-    implementation("io.ktor:ktor-client-cio:2.0.0")
-    implementation("io.ktor:ktor-client-serialization:2.0.0")
+    implementation("io.ktor:ktor-client-core:3.3.0")
+    implementation("io.ktor:ktor-client-cio:3.3.0")
+    implementation("io.ktor:ktor-client-serialization:3.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
 
