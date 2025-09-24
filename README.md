@@ -38,10 +38,10 @@ To generate a new project, navigate to the directory where you want to create th
  -p     --pid TEXT      Project ID (default: org.example.project)
  -a     --android       Include Android (default: true)
  -i     --ios           Include iOS (default: true)
- -iu    --ios-ui TEXT    iOS UI framework (default: compose)
+ -iu    --ios-ui TEXT   IOS UI framework (default: compose)
  -d     --desktop       Include Desktop (default: false)
  -w     --web           Include Web (default: false)
- -wu    --web-ui TEXT    Web UI framework (default: compose)
+ -wu    --web-ui TEXT   Web UI framework (default: compose)
  -s     --server        Include Server (default: false)
  -t     --tests         Include Tests (default: false)
  -h,    --help          Show this message and exit
