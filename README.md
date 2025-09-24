@@ -10,22 +10,23 @@ test setups.
 
 ### Requirements
 
-Kotlin and Compose Multiplatform development environment set up (JDK-17 and Gradle).
+Kotlin or Compose Multiplatform development environment set up (JDK-17 and Gradle).
 
 ### Installation
 
-Clone repository & build project using gradle:
+Clone repository & build project using Gradle:
 
 ```
 git clone https://github.com/chornge/kmpli.git
 cd kmpli
-gradle build installDist
+chmod +x kmpli
+gradle clean build installDist
 ```
 
 ### Usage
 
-The default targets are Android & IOS (Compose UI framework) including tests.
-To generate a new project, navigate to the directory where you want to create the project and run:
+To generate Android & IOS (Compose UI) targets with tests (default behavior on kmp.jetbrains.com),
+Navigate to the directory where you want to create the project and run:
 
 ```
 ./kmpli
@@ -34,35 +35,24 @@ To generate a new project, navigate to the directory where you want to create th
 #### Usage Options
 
 ```
- -n     --name TEXT     Project name (default: KotlinProject)
- -p     --pid TEXT      Project ID (default: org.example.project)
- -a     --android       Include Android (default: true)
- -i     --ios           Include iOS (default: true)
- -iu    --ios-ui TEXT   IOS UI framework (default: compose)
- -d     --desktop       Include Desktop (default: false)
- -w     --web           Include Web (default: false)
- -wu    --web-ui TEXT   Web UI framework (default: compose)
- -s     --server        Include Server (default: false)
- -t     --tests         Include Tests (default: false)
- -h,    --help          Show this message and exit
+ --name TEXT        Project name (default: KotlinProject)
+ --pid TEXT         Project ID (default: org.example.project)
+ --platforms TEXT   Comma-separated platforms (android,ios(swiftui),
+                    web(react),desktop,server)
+ --include-tests    Include Tests (default: false if a platform is specified)
+ -h, --help         Show this message and exit
 ```
 
 Examples:
 
 ```
-./kmpli --name "CMPProject" --pid "io.chornge.cmpproject" --android --ios --ios-ui "swiftui" --desktop --web --web-ui "react" --server --tests
-```
-
-OR using short options (exact same as above):
-
-```
-./kmpli -n "CMPProject" -p "io.chornge.cmpproject" -a -i -iu "swiftui" -d -w -wu "react" -s -t
+./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
 ```
 
 Generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
 
 ```
-./kmpli --name "CMPProject" --pid "io.chornge.cmpproject" --ios --desktop --web --server
+./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="ios,desktop,web,server"
 ```
 
 ### License
@@ -75,5 +65,5 @@ Contributions are welcome! Please fork the repository and create a pull request 
 
 ### Acknowledgments
 
-- Inspired by the need for a streamlined way to create Kotlin/Compose Multiplatform projects.
-- Thanks to the Kotlin and Compose Multiplatform communities for their support and resources.
+- Inspired by a need to create Kotlin/Compose Multiplatform projects without a GUI or using the website's interface.
+- Thanks to the Kotlin and Compose Multiplatform communities for the support and for the resources.
