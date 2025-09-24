@@ -43,7 +43,7 @@ Navigate to the directory where you want to create the project and run:
  -h, --help         Show this message and exit
 ```
 
-Examples:
+Examples (platforms or template):
 
 ```
 ./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
@@ -53,6 +53,21 @@ Generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Ex
 
 ```
 ./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="ios,desktop,web,server"
+```
+
+Generate a template gallery project - Barebones KMP library or Shared UI or Native UI:
+
+```
+./kmpli --template="shared-ui"
+./kmpli --template="native-ui"
+./kmpli --template="library" --name="LibraryProject" --pid="io.chornge.libraryproject"
+```
+
+Generate a template with the Amper build system:
+
+```
+./kmpli --template="shared-ui-amper"
+./kmpli --template="native-ui-amper" --name="NativeUIAmper" --pid="io.chornge.nativeuiamper"
 ```
 
 ### License
