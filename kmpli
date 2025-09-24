@@ -1,6 +1,7 @@
 #!/bin/bash
 if [ $# -eq 0 ]; then
-  ./build/install/kmpli/bin/kmpli --android --ios --tests
+  # Generate Android/IOS & include tests if no arguments are provided (similar behavior on kmp.jetbrains.com)
+  ./build/install/kmpli/bin/kmpli --include-tests
 else
   ./build/install/kmpli/bin/kmpli "$@"
 fi
