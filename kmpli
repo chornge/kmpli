@@ -1,7 +1,8 @@
 #!/bin/bash
 if [ $# -eq 0 ]; then
-  # Generate Android/IOS & include tests if no arguments are provided (similar behavior on kmp.jetbrains.com)
-  ./build/install/kmpli/bin/kmpli --include-tests
+  # No arguments, run with default (Android, IOS with Compose UI) with tests
+  ./gradlew run --args="--include-tests"
 else
-  ./build/install/kmpli/bin/kmpli "$@"
+  # Pass all provided arguments
+  ./gradlew run --args="$*"
 fi
