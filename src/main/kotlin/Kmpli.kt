@@ -41,7 +41,7 @@ class Kmpli : CliktCommand() {
             val selectedTemplate = ProjectTemplate.fromId(templateName)
                 ?: error("Invalid template name: $templateName\n\nAvailable templates:\n${ProjectTemplate.helpText()}")
 
-            echo("Using template: ${selectedTemplate.id} → ${selectedTemplate.description}")
+            echo("Generating template: ${selectedTemplate.id} → ${selectedTemplate.description}")
             val zipFile = downloadZip(selectedTemplate.url)
             val extractedDir = extractZip(zipFile, name ?: "KMP-App-Template")
 
@@ -64,6 +64,12 @@ class Kmpli : CliktCommand() {
             platforms = parsedPlatforms,
             tests = includeTests
         )
+        echo("Generating:")
+        parsedPlatforms.forEach { platform ->
+            val uiInfo = platform.ui?.let { " ($it)" } ?: ""
+            echo("• ${platform.name}$uiInfo")
+        }
+        if (includeTests) echo("• with tests")
         val zipFile = downloadZip(url)
         val extractedDir = extractZip(zipFile, name ?: "KotlinProject")
 
