@@ -48,7 +48,9 @@ To generate Android & IOS (Compose UI) targets with tests (default behavior on k
   -h, --help        Show this message and exit
 ```
 
-Generate a project with a custom name, project ID, platforms with tests:
+Set a custom project name and project ID: `--name="CustomName" --pid="io.chornge.customproject"`
+
+To generate a project with a custom name, project ID, platforms with tests, run:
 
 ```
 ./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
@@ -74,8 +76,6 @@ Generate a template configured with Amper (only available with Shared UI & Nativ
 ./kmpli --template="shared-ui-amper"
 ./kmpli --template="native-ui-amper"
 ```
-
-Configure a name & project ID for any platform or template: `--name="CoolName" --pid="io.chornge.coolproject"`
 
 ### License
 
