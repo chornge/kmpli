@@ -60,7 +60,7 @@ Generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Ex
 ./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="ios,desktop,web,server"
 ```
 
-Generate a template gallery project - Barebones KMP library or Shared UI or Native UI:
+Generate a template gallery project - Shared UI or Native UI or Barebones KMP library:
 
 ```
 ./kmpli --template="shared-ui"
@@ -68,7 +68,7 @@ Generate a template gallery project - Barebones KMP library or Shared UI or Nati
 ./kmpli --template="library" --name="LibraryProject" --pid="io.chornge.libraryproject"
 ```
 
-Generate a template with the Amper build system:
+Generate a template configured with Amper (only available with Shared UI & Native UI projects):
 
 ```
 ./kmpli --template="shared-ui-amper"
@@ -77,7 +77,7 @@ Generate a template with the Amper build system:
 
 ### License
 
-[Apache 2.0](LICENSE)
+[Apache-2.0](LICENSE)
 
 ### Contributing
 
