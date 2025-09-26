@@ -6,7 +6,7 @@ Pronounced `"Comply"`
 
 A command-line interface (CLI) designed to streamline the creation of new Kotlin/Compose Multiplatform
 projects. It offers a flexible way to generate customized project configurations and directory structures, including
-test setups.
+configuring with Amper, and test setups.
 
 ### Requirements
 
