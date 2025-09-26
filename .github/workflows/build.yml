@@ -15,17 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JDK17
+      - name: JDK-17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Grant execute permission for Gradle wrapper
+      - name: Permission
         run: chmod +x gradlew
 
       - name: Build
-        run: gradle build installDist
+        run: gradle build
 
-      - name: Tests
+      - name: Test
         run: gradle test

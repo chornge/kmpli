@@ -19,7 +19,7 @@ Clone repository & build project using Gradle:
 ```
 git clone https://github.com/chornge/kmpli.git
 cd kmpli
-chmod +x kmpli
+chmod +x kmpli gradlew
 gradle clean build installDist
 ```
 
@@ -48,7 +48,7 @@ To generate Android & IOS (Compose UI) targets with tests (default behavior on k
   -h, --help        Show this message and exit
 ```
 
-Examples (platforms or template):
+Generate a project with a custom name, project ID, platforms with tests:
 
 ```
 ./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
@@ -60,20 +60,22 @@ Generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Ex
 ./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="ios,desktop,web,server"
 ```
 
-Generate a template gallery project - Shared UI or Native UI or Barebones KMP library:
+Generate a template gallery project. Choose one - Shared UI or Native UI or Barebones KMP library:
 
 ```
 ./kmpli --template="shared-ui"
 ./kmpli --template="native-ui"
-./kmpli --template="library" --name="LibraryProject" --pid="io.chornge.libraryproject"
+./kmpli --template="library"
 ```
 
 Generate a template configured with Amper (only available with Shared UI & Native UI projects):
 
 ```
 ./kmpli --template="shared-ui-amper"
-./kmpli --template="native-ui-amper" --name="NativeUIAmper" --pid="io.chornge.nativeuiamper"
+./kmpli --template="native-ui-amper"
 ```
+
+Configure a name & project ID for any platform or template: `--name="CoolName" --pid="io.chornge.coolproject"`
 
 ### License
 
