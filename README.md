@@ -20,7 +20,7 @@ Clone repository & build project using Gradle:
 git clone https://github.com/chornge/kmpli.git
 cd kmpli
 chmod +x kmpli gradlew
-gradle clean build installDist
+./gradlew clean build
 ```
 
 ### Usage
