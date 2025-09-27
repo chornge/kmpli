@@ -11,8 +11,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.io.File
 import java.net.URLEncoder
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.zip.ZipInputStream
 
 class Kmpli : CliktCommand() {
@@ -168,7 +166,9 @@ class Kmpli : CliktCommand() {
                         newFile.mkdirs()
                     } else {
                         newFile.parentFile.mkdirs()
-                        Files.copy(zip, newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                        newFile.outputStream().use { output ->
+                            zip.copyTo(output)
+                        }
                     }
                 }
 
@@ -184,21 +184,19 @@ class Kmpli : CliktCommand() {
         val newDirPath = pid.replace(".", "/")
 
         // Move all files from old package path to new package path
-        dir.walkTopDown().forEach { file ->
+        dir.walk().forEach { file ->
             val relativePath = file.relativeToOrNull(dir)?.path ?: return@forEach
 
             if (relativePath.contains(oldDirPath) && file.isFile) {
                 val newRelativePath = relativePath.replace(oldDirPath, newDirPath)
                 val targetFile = File(dir, newRelativePath)
-
                 targetFile.parentFile.mkdirs()
 
-                file.renameTo(targetFile)
-                // Fallback: renameTo() only works across the same filesystem
-                /* if (!file.renameTo(targetFile)) {
-                     file.copyTo(targetFile, overwrite = true)
-                     file.delete()
-                 }*/
+                // Move or fallback to copy
+                if (!file.renameTo(targetFile)) {
+                    file.copyTo(targetFile, overwrite = true)
+                    file.delete()
+                }
             }
         }
 
@@ -208,9 +206,9 @@ class Kmpli : CliktCommand() {
             oldPackageDir.deleteRecursively()
         }
 
-        // Replace placeholders in all files
+        // Replace placeholders in all non-binary files
         dir.walk().forEach { file ->
-            if (file.isFile) {
+            if (file.isFile && !isBinaryFile(file)) {
                 var content = file.readText()
                 content = content.replace("KotlinProject", name)
                 content = content.replace("KMP-App-Template", name)
@@ -219,6 +217,20 @@ class Kmpli : CliktCommand() {
             }
         }
     }
+}
+
+fun isBinaryFile(file: File): Boolean {
+    file.inputStream().use { input ->
+        val buffer = ByteArray(8000)
+        val read = input.read(buffer)
+        for (i in 0 until read) {
+            val b = buffer[i]
+            // If byte is a non-printable control character (outside normal text range),
+            // consider the file binary and skip to avoid corrupting binary files like.jar, .png, etc.
+            if (b < 0x09 || (b in 0x0E..0x1F) || b == 0x7F.toByte()) return true
+        }
+    }
+    return false
 }
 
 sealed class ProjectTemplate(
@@ -260,8 +272,6 @@ sealed class ProjectTemplate(
         )
 
         fun fromId(id: String): ProjectTemplate? = allTemplates.find { it.id.equals(id, ignoreCase = true) }
-
-        fun listTemplateIds(): List<String> = allTemplates.map { it.id }
 
         fun helpText(): String = allTemplates.joinToString("\n\n") { "${it.id} → ${it.description}" }
     }
