@@ -29,9 +29,9 @@ jobs:
           mkdir release
           
           VERSION=${GITHUB_REF/refs\/tags\//}
-          echo "RELEASE_NAME=kmpli-$VERSION" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$VERSION" >> $GITHUB_ENV
           
-          zip -r "release/${RELEASE_NAME}.zip" . \
+          zip -r "release/kmpli.zip" . \
           -x ".DS_Store" \
              ".git/*" \
              ".github/*" \
@@ -58,7 +58,6 @@ jobs:
           tag_name: ${{ github.ref }}
           name: ${{ env.RELEASE_NAME }}
           body: ${{ env.RELEASE_NOTES }}
-          files: |
-            release/*
+          files: release/kmpli.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
