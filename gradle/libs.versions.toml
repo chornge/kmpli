@@ -1,0 +1,21 @@
+[versions]
+appVersion = "v0.2.0"
+clikt = "3.5.0"
+jupiter = "5.8.1"
+kotlinJvm = "2.1.20"
+ktor = "3.3.0"
+logback = "1.5.13"
+serialization = "1.6.3"
+slf4j = "2.0.9"
+
+[libraries]
+clikt = { module = "com.github.ajalt.clikt:clikt", version = { ref = "clikt" } }
+junitJupiter = { module = "org.junit.jupiter:junit-jupiter", version = { ref = "jupiter" } }
+kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = { ref = "serialization" } }
+ktorClientCio = { module = "io.ktor:ktor-client-cio", version = { ref = "ktor" } }
+ktorClientCore = { module = "io.ktor:ktor-client-core", version = { ref = "ktor" } }
+ktorClientSerialization = { module = "io.ktor:ktor-client-serialization", version = { ref = "ktor" } }
+logbackClassic = { module = "ch.qos.logback:logback-classic", version = { ref = "logback" } }
+slf4jApi = { module = "org.slf4j:slf4j-api", version = { ref = "slf4j" } }
+
+[plugins]

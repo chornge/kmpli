@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
     application
+    kotlin("jvm") version libs.versions.kotlinJvm.get()
 }
 
 application {
@@ -8,7 +8,7 @@ application {
 }
 
 group = "io.chornge.kmpli"
-version = "1.0-SNAPSHOT"
+version = libs.versions.appVersion.get()
 
 repositories {
     mavenCentral()
@@ -16,21 +16,20 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("com.github.ajalt.clikt:clikt:3.5.0")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
-
-    implementation("io.ktor:ktor-client-core:3.3.0")
-    implementation("io.ktor:ktor-client-cio:3.3.0")
-    implementation("io.ktor:ktor-client-serialization:3.3.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-
-    implementation("org.slf4j:slf4j-api:2.0.9")
-    runtimeOnly("ch.qos.logback:logback-classic:1.5.13")
+    implementation(libs.clikt)
+    testImplementation(libs.junitJupiter)
+    implementation(libs.kotlinxSerializationJson)
+    implementation(libs.ktorClientCio)
+    implementation(libs.ktorClientCore)
+    implementation(libs.ktorClientSerialization)
+    implementation(libs.slf4jApi)
+    runtimeOnly(libs.logbackClassic)
 }
 
 tasks.test {
     useJUnitPlatform()
 }
+
 kotlin {
     jvmToolchain(17)
     sourceSets.all {

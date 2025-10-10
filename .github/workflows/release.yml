@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: [ "v*.*.*" ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK-17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+
+      - name: Package
+        run: |
+          rm -rf release
+          mkdir release
+          
+          VERSION=${GITHUB_REF/refs\/tags\//}
+          echo "RELEASE_NAME=kmpli-$VERSION" >> $GITHUB_ENV
+          
+          zip -r "${RELEASE_NAME}.zip" . \
+          -x ".DS_Store" \
+             ".git/*" \
+             ".gradle/*" \
+             ".idea/*" \
+             ".kotlin/*" \
+             "build/*" \
+             "release/*"
+
+      - name: Changelog
+        run: |
+          # Get all commits from the previous tag to this tag
+          git fetch --prune --unshallow
+          PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF}^)
+          RELEASE_NOTES=$(git log ${PREV_TAG}..${GITHUB_REF} --pretty=format:"- %s")
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Release
+        if: success() # previous steps were successful
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ env.RELEASE_NAME }}
+          body: ${{ env.RELEASE_NOTES }}
+          files: |
+            release/*.jar
+            release/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
