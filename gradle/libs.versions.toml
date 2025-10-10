@@ -1,5 +1,5 @@
 [versions]
-appVersion = "v0.2.0"
+appVersion = "v0.2.1"
 clikt = "3.5.0"
 jupiter = "5.8.1"
 kotlinJvm = "2.1.20"
@@ -17,5 +17,3 @@ ktorClientCore = { module = "io.ktor:ktor-client-core", version = { ref = "ktor"
 ktorClientSerialization = { module = "io.ktor:ktor-client-serialization", version = { ref = "ktor" } }
 logbackClassic = { module = "ch.qos.logback:logback-classic", version = { ref = "logback" } }
 slf4jApi = { module = "org.slf4j:slf4j-api", version = { ref = "slf4j" } }
-
-[plugins]
