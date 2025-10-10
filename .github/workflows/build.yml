@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   build:
@@ -21,11 +21,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Permission
-        run: chmod +x gradlew
-
       - name: Build
-        run: ./gradlew build
+        run: |
+          chmod +x gradlew
+          ./gradlew build
 
       - name: Test
         run: ./gradlew test
