@@ -1,5 +1,5 @@
 [versions]
-appVersion = "0.2.0"
+appVersion = "v0.2.0"
 clikt = "3.5.0"
 jupiter = "5.8.1"
 kotlinJvm = "2.1.20"
