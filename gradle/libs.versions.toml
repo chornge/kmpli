@@ -1,19 +1,31 @@
 [versions]
-appVersion = "v0.2.4"
-clikt = "3.5.0"
+appVersion = "1.1.0"
+androidx-lifecycle = "2.9.4"
+composeHotReload = "1.0.0-beta07"
+composeMultiplatform = "1.9.0"
+junit = "4.13.2"
 jupiter = "5.8.1"
-kotlinJvm = "2.1.20"
+kotlin = "2.2.20"
+kotlinx-coroutines = "1.10.2"
 ktor = "3.3.0"
 logback = "1.5.13"
-serialization = "1.6.3"
-slf4j = "2.0.9"
+serialization = "1.9.0"
 
 [libraries]
-clikt = { module = "com.github.ajalt.clikt:clikt", version = { ref = "clikt" } }
-junitJupiter = { module = "org.junit.jupiter:junit-jupiter", version = { ref = "jupiter" } }
-kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = { ref = "serialization" } }
-ktorClientCio = { module = "io.ktor:ktor-client-cio", version = { ref = "ktor" } }
-ktorClientCore = { module = "io.ktor:ktor-client-core", version = { ref = "ktor" } }
-ktorClientSerialization = { module = "io.ktor:ktor-client-serialization", version = { ref = "ktor" } }
-logbackClassic = { module = "ch.qos.logback:logback-classic", version = { ref = "logback" } }
-slf4jApi = { module = "org.slf4j:slf4j-api", version = { ref = "slf4j" } }
+androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
+junit = { module = "junit:junit", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version = { ref = "jupiter" } }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = { ref = "serialization" } }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version = { ref = "ktor" } }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version = { ref = "ktor" } }
+logback-classic = { module = "ch.qos.logback:logback-classic", version = { ref = "logback" } }
+
+[plugins]
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

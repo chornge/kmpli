@@ -1,13 +1,15 @@
+package io.chornge
+
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.assertThrows
-import kotlin.test.Test
+import kotlinx.serialization.json.jsonArray
 
 class KmpliTest {
     private lateinit var kmpli: Kmpli
@@ -29,7 +31,7 @@ class KmpliTest {
 
     @Test
     fun `parsePlatforms parses single platform without ui`() {
-        val platforms = kmpli.parsePlatforms("web")
+        val platforms = kmpli.parsePlatforms("webb")
         assertEquals(1, platforms.size)
         assertEquals("web", platforms[0].name)
         assertEquals(null, platforms[0].ui)

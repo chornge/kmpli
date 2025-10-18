@@ -27,4 +27,4 @@ jobs:
           ./gradlew build
 
       - name: Test
-        run: ./gradlew test
+        run: ./gradlew jvmTest

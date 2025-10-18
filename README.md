@@ -10,24 +10,33 @@ configuring with Amper, and test setups.
 
 ### Requirements
 
-Kotlin or Compose Multiplatform development environment set up (JDK-17 and Gradle).
+Kotlin or Compose Multiplatform development environment set up (JDK-17, Gradle, Git).
 
 ### Installation
 
-Clone repository & build project using Gradle:
-
-```
+```bash
 git clone https://github.com/chornge/kmpli.git
 cd kmpli
-chmod +x kmpli gradlew
-./gradlew clean build
+```
+
+Mac/Linux:
+
+```bash
+chmod +x install.sh kmpli
+bash install.sh
+```
+
+Windows (Powershell):
+
+```powershell
+bash install.sh
 ```
 
 ### Usage
 
-To generate Android & IOS (Compose UI) targets with tests (default behavior on kmp.jetbrains.com), run:
+To generate Android & IOS (Compose UI) targets (similar to kmp.jetbrains.com), run:
 
-```
+```bash
 ./kmpli
 ```
 
@@ -45,19 +54,18 @@ To generate Android & IOS (Compose UI) targets with tests (default behavior on k
   --platforms TEXT  Target platform(s)
                     android,ios(swiftui),web(react),desktop,server
   --include-tests   Include Tests (optional)
-  -h, --help        Show this message and exit
 ```
 
 To generate all the platforms (IOS with SwiftUI and Web with React/TS), with a name, project ID and with tests, run:
 
-```
-./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
+```bash
+./kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
 ```
 
 To generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
 
-```
-./kmpli --name="CMPProject" --pid="io.chornge.cmpproject" --platforms="ios,desktop,web,server"
+```bash
+./kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="ios,desktop,web,server"
 ```
 
 To generate a template project. Shared UI or Native UI or Barebones KMP library. Pick one:
