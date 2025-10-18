@@ -26,9 +26,10 @@ chmod +x install.sh kmpli
 bash install.sh
 ```
 
-Windows (Powershell):
+Windows: [Git for Windows](https://gitforwindows.org/), anything with bash; wsl (`wsl --install`) etc.
 
-```powershell
+```
+chmod +x install.sh kmpli
 bash install.sh
 ```
 

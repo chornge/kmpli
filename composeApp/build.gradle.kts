@@ -1,10 +1,10 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose.hotReload)
 }
 
 kotlin {
@@ -12,23 +12,27 @@ kotlin {
 
     macosX64("macosX64") {
         binaries.executable {
-            entryPoint = "io.chornge.KmpliKt"
-            freeCompilerArgs = listOf("-Xdisable-phases=CheckUnreachable")
+            entryPoint = "io.chornge.kmpli.KmpliKt"
         }
     }
     macosArm64("macosArm64") {
         binaries.executable {
-            entryPoint = "io.chornge.KmpliKt"
+            entryPoint = "io.chornge.kmpli.KmpliKt"
         }
     }
     linuxX64("linuxX64") {
         binaries.executable {
-            entryPoint = "io.chornge.KmpliKt"
+            entryPoint = "io.chornge.kmpli.KmpliKt"
+        }
+    }
+    linuxArm64("linuxArm64") {
+        binaries.executable {
+            entryPoint = "io.chornge.kmpli.KmpliKt"
         }
     }
     mingwX64("mingwX64") {
         binaries.executable {
-            entryPoint = "io.chornge.KmpliKt"
+            entryPoint = "io.chornge.kmpli.KmpliKt"
         }
     }
 
@@ -50,8 +54,8 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.runtime)
             implementation(compose.ui)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.junit.jupiter)
             implementation(libs.ktor.client.cio)
             implementation(libs.ktor.client.core)
@@ -72,17 +76,17 @@ kotlin {
 // JVM builds only
 compose.desktop {
     application {
-        mainClass = "io.chornge.KmpliKt"
+        mainClass = "io.chornge.kmpli.KmpliKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "io.chornge"
+            packageName = "io.chornge.kmpli"
             packageVersion = libs.versions.appVersion.get()
         }
     }
 }
 
-val nativeTargets = listOf("MacosX64", "MacosArm64", "LinuxX64", "MingwX64")
+val nativeTargets = listOf("MacosX64", "MacosArm64", "LinuxX64", "LinuxArm64", "MingwX64")
 
 // Build all native binaries
 tasks.register("buildAllNative") {
@@ -94,7 +98,7 @@ tasks.register("buildAllNative") {
 // Copy all binaries to `dist` folder
 tasks.register<Copy>("copyBinariesToDist") {
     group = "distribution"
-    description = "Copy all native binaries to the `dist` directory"
+    description = "Copy all native binaries to the build/dist directory"
 
     val distDir = layout.buildDirectory.dir("dist")
     into(distDir)
@@ -104,8 +108,7 @@ tasks.register<Copy>("copyBinariesToDist") {
         from(binaryDir) {
             include("*")
             rename { fileName ->
-                // Keep .exe extension for Windows, else no extension
-                if (target.startsWith("mingw")) fileName
+                if (target.lowercase().startsWith("mingw")) fileName
                 else fileName.removeSuffix(".kexe")
             }
         }

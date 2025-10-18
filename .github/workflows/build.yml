@@ -5,11 +5,36 @@ on:
     branches: [ develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS (Intel)
+          - os: macos-13
+            arch: x64
+            target: MacosX64
+          # macOS (Apple)
+          - os: macos-14
+            arch: arm64
+            target: MacosArm64
+          # Linux (x64)
+          - os: ubuntu-24.04
+            arch: x64
+            target: LinuxX64
+          # Linux (arm64)
+          - os: ubuntu-24.04
+            arch: arm64
+            target: LinuxArm64
+          # Windows (x64)
+          - os: windows-latest
+            arch: x64
+            target: MingwX64
 
     steps:
       - name: Checkout
@@ -22,9 +47,31 @@ jobs:
           java-version: '17'
 
       - name: Build
+        shell: bash
         run: |
           chmod +x gradlew
           ./gradlew build
 
       - name: Test
-        run: ./gradlew jvmTest
+        shell: bash
+        run: |
+          ./gradlew jvmTest
+
+      - name: Build binaries
+        shell: bash
+        run: |
+          ./gradlew linkReleaseExecutable${{ matrix.target }}
+
+      - name: Copy binaries
+        shell: bash
+        run: |
+          mkdir -p dist
+          BIN_DIR=build/bin/${{ matrix.target }}/releaseExecutable
+          cp $BIN_DIR/* dist/
+          ls -lh dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmpli-${{ matrix.target }}
+          path: dist/

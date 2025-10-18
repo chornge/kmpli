@@ -1,15 +1,16 @@
-package io.chornge
+package io.chornge.kmpli
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.net.URLDecoder
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonArray
 
 class KmpliTest {
     private lateinit var kmpli: Kmpli
@@ -31,7 +32,7 @@ class KmpliTest {
 
     @Test
     fun `parsePlatforms parses single platform without ui`() {
-        val platforms = kmpli.parsePlatforms("webb")
+        val platforms = kmpli.parsePlatforms("web")
         assertEquals(1, platforms.size)
         assertEquals("web", platforms[0].name)
         assertEquals(null, platforms[0].ui)
@@ -93,8 +94,8 @@ class KmpliTest {
             tests = false
         )
 
-        val decodedSpec = java.net.URLDecoder.decode(url.substringAfter("&spec="), "UTF-8")
-        val json = Json.parseToJsonElement(decodedSpec).jsonObject
+        val decodedSpec = URLDecoder.decode(url.substringAfter("&spec="), "UTF-8")
+        val json = Json.Default.parseToJsonElement(decodedSpec).jsonObject
 
         val androidUI = json["targets"]!!.jsonObject["android"]!!.jsonObject["ui"]!!.jsonArray
         val webUI = json["targets"]!!.jsonObject["web"]!!.jsonObject["ui"]!!.jsonArray

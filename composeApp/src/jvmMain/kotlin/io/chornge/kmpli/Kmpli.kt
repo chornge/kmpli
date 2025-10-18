@@ -1,4 +1,4 @@
-package io.chornge
+package io.chornge.kmpli
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -35,7 +35,9 @@ class Kmpli {
         // Template mode
         options.template?.let { templateName ->
             if (options.name == null) options.name = "CMPProject"
-            if (options.pid == null) options.pid = "org.cmp.project"
+            // Replace non-alphanumeric characters
+            if (options.pid == null) options.pid =
+                "org.cmp.${options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")}"
             require(options.platforms == null) {
                 "--template and --platforms cannot be used together."
             }
@@ -61,7 +63,7 @@ class Kmpli {
         // Platforms mode
         val parsedPlatforms = parsePlatforms(options.platforms)
         if (options.name == null) options.name = "CMPProject"
-        if (options.pid == null) options.pid = "org.cmp.project"
+        if (options.pid == null) options.pid = "org.cmp.${options.name!!.lowercase()}"
         val url = buildUrl(
             name = options.name!!,
             id = options.pid!!,
@@ -82,7 +84,8 @@ class Kmpli {
             dir = extractedDir,
             name = options.name!!,
             pid = options.pid!!,
-            oldPid = "io.example.test"
+            //oldPid = "io.example.test"
+            oldPid = "org.example.project"
         )
 
         if (zipFile.exists()) zipFile.delete()

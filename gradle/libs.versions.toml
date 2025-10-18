@@ -1,19 +1,19 @@
 [versions]
 appVersion = "1.1.0"
 androidx-lifecycle = "2.9.4"
-composeHotReload = "1.0.0-beta07"
-composeMultiplatform = "1.9.0"
+compose-hotReload = "1.0.0-beta07"
+compose-multiplatform = "1.9.0"
 junit = "4.13.2"
 jupiter = "5.8.1"
 kotlin = "2.2.20"
 kotlinx-coroutines = "1.10.2"
 ktor = "3.3.0"
-logback = "1.5.13"
+logback-classic = "1.5.13"
 serialization = "1.9.0"
 
 [libraries]
-androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
-androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
 junit = { module = "junit:junit", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version = { ref = "jupiter" } }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -22,10 +22,10 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version = { ref = "ktor" } }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version = { ref = "ktor" } }
-logback-classic = { module = "ch.qos.logback:logback-classic", version = { ref = "logback" } }
+logback-classic = { module = "ch.qos.logback:logback-classic", version = { ref = "logback-classic" } }
 
 [plugins]
-composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
-composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-hotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "compose-hotReload" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
