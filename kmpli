@@ -6,15 +6,12 @@
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
 case "$OS" in
-  # macos
   darwin*)
     ./composeApp/build/bin/macosX64/releaseExecutable/kmpli.kexe "$*"
     ;;
-  # linux
   linux*)
     ./composeApp/build/bin/linuxX64/releaseExecutable/kmpli.kexe "$*"
     ;;
-  # windows
   msys*|cygwin*|mingw*)
     ./composeApp/build/bin/mingwX64/releaseExecutable/kmpli.exe "$*"
     ;;
