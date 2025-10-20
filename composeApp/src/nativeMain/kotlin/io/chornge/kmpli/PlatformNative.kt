@@ -1,6 +1,6 @@
 package io.chornge.kmpli
 
-import io.ktor.client.*
+//import io.ktor.client.*
 //import io.ktor.client.engine.curl.*
 //import io.ktor.client.engine.darwin.*
 import io.ktor.client.HttpClient
@@ -59,26 +59,33 @@ actual fun Platform(): Platform = object : Platform {
         val writtenSize = FileSystem.SYSTEM.metadata(tmpZip.toPath()).size
         printLine("Saved ZIP to $tmpZip, size=$writtenSize bytes")
 
-        if (writtenSize != null) {
-            if (writtenSize < 100) {
-                printLine("❌ ZIP file too small to be valid. Aborting extraction.")
-                FileSystem.SYSTEM.delete(tmpZip.toPath())
-                return targetPath.toString()
-            }
+        if (writtenSize != null && writtenSize < 100) {
+            printLine("❌ ZIP file too small to be valid. Aborting extraction.")
+            FileSystem.SYSTEM.delete(tmpZip.toPath())
+            return targetPath.toString()
         }
 
-        // Use unzip command safely
-        val exitCode = system("unzip -o $tmpZip -d $projectName")
+        // Unzip to current directory instead of projectName
+        val exitCode = system("unzip -o $tmpZip -d .")
         if (exitCode != 0) {
             printLine("❌ unzip failed with code $exitCode. Aborting extraction.")
             FileSystem.SYSTEM.delete(tmpZip.toPath())
             return targetPath.toString()
         }
 
-        // Remove temp zip after extraction
         FileSystem.SYSTEM.delete(tmpZip.toPath())
 
-        // Check extracted folder contents
+        // If we end up with projectName/projectName, fix it
+        val innerPath = "$projectName/$projectName".toPath()
+        if (FileSystem.SYSTEM.exists(innerPath)) {
+            printLine("🪄 Fixing nested directory structure...")
+            val innerEntries = FileSystem.SYSTEM.list(innerPath)
+            innerEntries.forEach { entry ->
+                FileSystem.SYSTEM.atomicMove(entry, "$projectName/${entry.name}".toPath())
+            }
+            FileSystem.SYSTEM.deleteRecursively(innerPath)
+        }
+
         val entries = FileSystem.SYSTEM.list(targetPath)
         if (entries.isEmpty()) {
             printLine("❌ Extraction produced empty folder: $targetPath")

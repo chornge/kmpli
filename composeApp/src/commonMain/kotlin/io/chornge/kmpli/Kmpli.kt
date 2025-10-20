@@ -91,13 +91,12 @@ class Kmpli(private val io: Platform = Platform()) {
     data class PlatformConfig(val name: String, val ui: String? = null)
 
     fun parsePlatforms(input: String?): List<PlatformConfig> {
-        val raw = input?.takeIf { it.isNotBlank() } ?: "android,ios(compose)"
+        val raw = input?.takeIf { it.isNotBlank() } ?: "android(compose),ios(compose)"
         return raw.split(",").map { part ->
             val match = Regex("""(\w+)(\(([^)]+)\))?""").find(part.trim())
-            PlatformConfig(
-                match?.groupValues?.get(1)?.lowercase() ?: error("Invalid: $part"),
-                match?.groupValues?.get(3)
-            )
+            val name = match?.groupValues?.get(1)?.lowercase() ?: error("Invalid: $part")
+            val ui = match.groupValues[3].ifBlank { "compose" }
+            PlatformConfig(name, ui)
         }
     }
 

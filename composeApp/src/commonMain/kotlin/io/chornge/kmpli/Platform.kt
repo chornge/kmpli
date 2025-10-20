@@ -3,7 +3,7 @@ package io.chornge.kmpli
 import io.ktor.client.HttpClient
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
-import platform.posix.*
+import platform.posix.getenv
 
 interface Platform {
     suspend fun httpGetBytes(url: String): ByteArray
@@ -18,4 +18,4 @@ expect fun Platform(): Platform
 expect fun HttpClient(): HttpClient
 
 @OptIn(ExperimentalForeignApi::class)
-fun osName(): String = platform.posix.getenv("OSTYPE")?.toKString() ?: "unknown"
+fun osName(): String = getenv("OSTYPE")?.toKString() ?: "unknown"
