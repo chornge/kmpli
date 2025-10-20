@@ -29,21 +29,7 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktor.client.cio)
                 implementation(libs.ktor.client.core)
-                /*implementation(compose.components.resources)
-                implementation(compose.components.uiToolingPreview)
-                implementation(compose.desktop.currentOs)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.runtime)
-                implementation(compose.ui)
-                implementation(libs.androidx.lifecycle.runtime.compose)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
-                implementation(libs.junit.jupiter)
-                implementation(libs.ktor.client.cio)
-                implementation(libs.ktor.client.core)
-                implementation(libs.kotlinx.coroutines.swing)
-                implementation(libs.kotlinx.serialization.json)
-                runtimeOnly(libs.logback.classic)*/
+                implementation(libs.ktor.client.content.negotiation)
             }
         }
         val commonTest by getting {
@@ -53,7 +39,6 @@ kotlin {
             }
         }
 
-        // Native uses Ktor engines instead of curl/unzip
         val nativeMain by creating {
             dependsOn(commonMain)
             dependencies {
@@ -98,9 +83,6 @@ tasks.register<Copy>("copyBinariesToDist") {
     group = "distribution"
     description = "Copy all native binaries to the build/dist directory"
 
-    val distDir = layout.buildDirectory.dir("dist")
-    into(distDir)
-
     nativeTargets.forEach { target ->
         val binaryDir = layout.buildDirectory.dir("bin/$target/releaseExecutable")
         from(binaryDir) {
@@ -110,12 +92,6 @@ tasks.register<Copy>("copyBinariesToDist") {
                 else fileName.removeSuffix(".kexe")
             }
         }
+        into(layout.buildDirectory.dir("dist/$target"))
     }
-}
-
-// Optional: Build all + Copy
-tasks.register("prepareDist") {
-    group = "distribution"
-    description = "Build all native binaries and copy them to dist"
-    dependsOn("buildAllNative", "copyBinariesToDist")
 }

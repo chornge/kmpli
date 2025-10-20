@@ -1,7 +1,10 @@
 package io.chornge.kmpli
 
+import io.ktor.client.*
+//import io.ktor.client.engine.curl.*
 //import io.ktor.client.engine.darwin.*
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.encodeURLPath
@@ -24,19 +27,23 @@ actual fun Platform(): Platform = object : Platform {
 
     override suspend fun httpGetBytes(url: String): ByteArray {
         printLine("Downloading from: $url")
-        val bytes = try {
-            client.get(url).bodyAsChannel().toByteArray()
+        try {
+            val response = client.get(url)
+            val contentType = response.headers["Content-Type"]
+            printLine("Content-Type: $contentType")
+
+            val bytes = response.bodyAsChannel().toByteArray()
+            printLine("Downloaded ${bytes.size} bytes")
+
+            if (contentType?.contains("html", ignoreCase = true) == true) {
+                printLine("⚠️ Warning: received HTML instead of ZIP — likely a TLS or redirect issue.")
+            }
+
+            return bytes
         } catch (e: Exception) {
             printLine("❌ HTTP request failed: ${e.message}")
             return ByteArray(0)
         }
-
-        printLine("Downloaded ${bytes.size} bytes")
-        if (bytes.isEmpty()) {
-            printLine("❌ Download returned empty content")
-        }
-
-        return bytes
     }
 
     override fun extractZip(zipBytes: ByteArray, projectName: String): String {
@@ -120,9 +127,29 @@ actual fun Platform(): Platform = object : Platform {
     }
 }
 
-actual fun HttpClient(): HttpClient =
-    HttpClient(/*Darwin*/) {
-        engine {
-            // optional config, e.g., timeout
+actual fun HttpClient(): HttpClient = when {
+    osName().contains("Darwin", ignoreCase = true) -> {
+        HttpClient(/*Darwin*/) {
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+            }
+            expectSuccess = false
         }
     }
+
+    else -> {
+        HttpClient(/*Curl*/) {
+            engine {
+                /*configureCurl {
+                    // disable SSL verify (via libcurl flag)
+                    curl_easy_setopt(it, 64, 0) // peer verification
+                    curl_easy_setopt(it, 81, 0) // host verification
+                }*/
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+            }
+            expectSuccess = false
+        }
+    }
+}

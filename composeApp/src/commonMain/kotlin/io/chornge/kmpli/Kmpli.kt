@@ -30,7 +30,7 @@ class Kmpli(private val io: Platform = Platform()) {
             val selectedTemplate = ProjectTemplate.fromId(templateName)
                 ?: error("Invalid template name: $templateName\nAvailable: ${ProjectTemplate.availableTemplates()}")
 
-            io.printLine("Generating template: ${selectedTemplate.id} → ${selectedTemplate.description}")
+            io.printLine("Generating template: ${selectedTemplate.id} -> ${selectedTemplate.description}")
 
             val zipBytes = io.httpGetBytes(selectedTemplate.url)
             val extractedDir = io.extractZip(zipBytes, options.name!!)

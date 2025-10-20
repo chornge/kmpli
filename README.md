@@ -10,12 +10,12 @@ configuring with Amper, and test setups.
 
 ### Requirements
 
-Kotlin or Compose Multiplatform development environment set up (JDK-17, Gradle, Git).
+Kotlin or Compose Multiplatform development environment set up (JDK-17+, Gradle, Git).
 
 ### Installation
 
 ```bash
-git clone https://github.com/chornge/kmpli.git
+git clone https://github.com/chornge/kmpli
 cd kmpli
 ```
 
@@ -47,11 +47,11 @@ To generate Android & IOS (Compose UI) targets (similar to kmp.jetbrains.com), r
   --name TEXT       Project name (optional)
   --pid TEXT        Project ID (optional)
   --template TEXT   Multiplatform template
-                    shared-ui → Shared UI App (Compose)
-                    native-ui → Native UI App (Compose + SwiftUI) 
-                    library → Bare-bones Multiplatform Library
-                    shared-ui-amper → Shared UI App (configured with Amper)
-                    native-ui-amper → Native UI App (configured with Amper)
+                    shared-ui -> Shared UI App (Compose)
+                    native-ui -> Native UI App (Compose + SwiftUI) 
+                    library -> Bare-bones Multiplatform Library
+                    shared-ui-amper -> Shared UI App (configured with Amper)
+                    native-ui-amper -> Native UI App (configured with Amper)
   --platforms TEXT  Target platform(s)
                     android,ios(swiftui),web(react),desktop,server
   --include-tests   Include Tests (optional)
