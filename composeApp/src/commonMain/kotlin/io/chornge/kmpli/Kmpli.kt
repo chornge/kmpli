@@ -27,8 +27,8 @@ class Kmpli(private val io: Platform = Platform()) {
             if (options.pid == null)
                 options.pid = "org.cmp.${options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")}"
 
-            val selectedTemplate = ProjectTemplate.fromId(templateName)
-                ?: error("Invalid template name: $templateName\nAvailable: ${ProjectTemplate.availableTemplates()}")
+            val selectedTemplate = Template.fromId(templateName)
+                ?: error("Invalid template name: $templateName\nAvailable: ${Template.availableTemplates()}")
 
             io.printLine("Generating template: ${selectedTemplate.id} -> ${selectedTemplate.description}")
 
