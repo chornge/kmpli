@@ -47,50 +47,43 @@ actual fun Platform(): Platform = object : Platform {
     }
 
     override fun extractZip(zipBytes: ByteArray, projectName: String): String {
+        val tmpZip = "$projectName.zip"
         val targetPath = "./$projectName".toPath()
 
-        // Make sure target folder exists
-        FileSystem.SYSTEM.createDirectories(targetPath)
-
-        // Temporary zip file
-        val tmpZip = "$projectName.zip"
         FileSystem.SYSTEM.write(tmpZip.toPath()) { write(zipBytes) }
+        printLine("Saved ZIP to $tmpZip")
 
-        val writtenSize = FileSystem.SYSTEM.metadata(tmpZip.toPath()).size
-        printLine("Saved ZIP to $tmpZip, size=$writtenSize bytes")
-
-        if (writtenSize != null && writtenSize < 100) {
-            printLine("❌ ZIP file too small to be valid. Aborting extraction.")
-            FileSystem.SYSTEM.delete(tmpZip.toPath())
-            return targetPath.toString()
-        }
-
-        // Unzip to current directory instead of projectName
+        // Unzip into current directory
         val exitCode = system("unzip -o $tmpZip -d .")
         if (exitCode != 0) {
-            printLine("❌ unzip failed with code $exitCode. Aborting extraction.")
+            printLine("❌ unzip failed with code $exitCode")
             FileSystem.SYSTEM.delete(tmpZip.toPath())
             return targetPath.toString()
         }
 
         FileSystem.SYSTEM.delete(tmpZip.toPath())
 
-        // If we end up with projectName/projectName, fix it
-        val innerPath = "$projectName/$projectName".toPath()
-        if (FileSystem.SYSTEM.exists(innerPath)) {
-            printLine("🪄 Fixing nested directory structure...")
-            val innerEntries = FileSystem.SYSTEM.list(innerPath)
-            innerEntries.forEach { entry ->
-                FileSystem.SYSTEM.atomicMove(entry, "$projectName/${entry.name}".toPath())
-            }
-            FileSystem.SYSTEM.deleteRecursively(innerPath)
+        // Detect the actual extracted folder (e.g. "KMP-App-Template-main")
+        val extractedFolder = FileSystem.SYSTEM.list("./".toPath()).firstOrNull {
+            it.name != projectName && it.name.contains("KMP-App-Template")
         }
 
+        if (extractedFolder == null) {
+            return targetPath.toString()
+        }
+
+        // Rename/move to intended project name
+        if (!FileSystem.SYSTEM.exists(targetPath)) {
+            FileSystem.SYSTEM.atomicMove(extractedFolder, targetPath)
+            printLine("✅ Renamed ${extractedFolder.name} -> ${targetPath.name}")
+        }
+
+        // Sanity check
         val entries = FileSystem.SYSTEM.list(targetPath)
         if (entries.isEmpty()) {
             printLine("❌ Extraction produced empty folder: $targetPath")
         } else {
-            printLine("✅ Extraction complete: $targetPath")
+            printLine("✅ Extraction complete: $targetPath (${entries.size} items)")
         }
 
         return targetPath.toString()
