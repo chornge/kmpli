@@ -1,7 +1,7 @@
 package io.chornge.kmpli
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.curl.Curl
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
@@ -125,9 +125,9 @@ actual fun Platform(): Platform = object : Platform {
 }
 
 actual fun NetClient(): HttpClient {
-    return HttpClient {
+    return HttpClient(Curl) {
         engine {
-            //
+            sslVerify = true
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000

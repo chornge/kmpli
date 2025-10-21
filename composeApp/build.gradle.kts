@@ -57,9 +57,7 @@ kotlin {
         val nativeMain by creating {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.ktor.client.cio)
-                implementation(libs.ktor.client.content.negotiation)
-                implementation(libs.ktor.network.tls)
+                implementation(libs.ktor.client.curl)
                 implementation(libs.squareup.okio)
             }
         }
@@ -67,33 +65,33 @@ kotlin {
         val macosX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                implementation(libs.ktor.client.darwin)
+
             }
         }
         val macosArm64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                implementation(libs.ktor.client.darwin)
+
             }
         }
 
         val linuxX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                //implementation(libs.ktor.client.curl)
+
             }
         }
         val linuxArm64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                //implementation(libs.ktor.client.curl)
+
             }
         }
 
         val mingwX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                implementation(libs.ktor.client.winhttp)
+
             }
         }
     }
