@@ -22,23 +22,22 @@ cd kmpli
 Mac/Linux:
 
 ```bash
-chmod +x install.sh kmpli
+chmod +x install.sh
 bash install.sh
 ```
 
-Windows: [Git for Windows](https://gitforwindows.org/), anything with bash; wsl (`wsl --install`) etc.
+Windows (Powershell):
 
 ```
-chmod +x install.sh kmpli
-bash install.sh
+.\install.ps1
 ```
 
 ### Usage
 
 To generate Android & IOS (Compose UI) targets (similar to kmp.jetbrains.com), run:
 
-```bash
-./kmpli
+```
+kmpli
 ```
 
 #### Usage Options
@@ -60,28 +59,28 @@ To generate Android & IOS (Compose UI) targets (similar to kmp.jetbrains.com), r
 To generate all the platforms (IOS with SwiftUI and Web with React/TS), with a name, project ID and with tests, run:
 
 ```bash
-./kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
+kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
 ```
 
 To generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
 
 ```bash
-./kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="ios,desktop,web,server"
+kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="ios,desktop,web,server"
 ```
 
 To generate a template project. Shared UI or Native UI or Barebones KMP library. Pick one:
 
 ```
-./kmpli --template="shared-ui"
-./kmpli --template="native-ui"
-./kmpli --template="library"
+kmpli --template="shared-ui"
+kmpli --template="native-ui"
+kmpli --template="library"
 ```
 
 To generate a template configured with Amper (only available with Shared UI or Native UI). Pick one:
 
 ```
-./kmpli --template="shared-ui-amper"
-./kmpli --template="native-ui-amper"
+kmpli --template="shared-ui-amper"
+kmpli --template="native-ui-amper"
 ```
 
 ### License

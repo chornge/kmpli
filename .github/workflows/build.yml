@@ -55,17 +55,3 @@ jobs:
         shell: bash
         run: |
           ./gradlew allTests
-
-#      - name: Copy binaries
-#        shell: bash
-#        run: |
-#          BIN_DIR=build/bin/${{ matrix.target.toLower() }}/releaseExecutable
-#          mkdir -p build/dist
-#          cp $BIN_DIR/* build/dist/
-#          ls -lh build/dist/
-#
-#      - name: Upload artifacts
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: kmpli-${{ matrix.target }}
-#          path: build/dist/
