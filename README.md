@@ -10,25 +10,23 @@ configuring with Amper, and test setups.
 
 ### Requirements
 
-• JDK-17+
+Kotlin or Compose Multiplatform dev environment (IntelliJ, Android Studio) with JDK-17+, Gradle, Git.
 
-• Gradle
+If on:
 
-• Git
+• macOS (homebrew): `brew install openssl curl`
 
-• If on macOS (homebrew): `brew install openssl curl`
+• linux: `sudo apt-get install -y libcurl4-openssl-dev libssl-dev build-essential pkg-config`
 
-• If on linux: `sudo apt-get install -y libcurl4-openssl-dev libssl-dev build-essential pkg-config`
-
-• If on windows (chocolatey): `choco install -y curl libssh2`
-
-• Kotlin or Compose Multiplatform dev environment (IntelliJ, Android Studio).
+• windows (chocolatey): `choco install -y curl libssh2`
 
 ### Installation
 
 ```bash
 git clone https://github.com/chornge/kmpli
 cd kmpli
+chmod +x gradlew
+./gradlew build
 ```
 
 Mac/Linux:
