@@ -12,7 +12,7 @@ jobs:
     name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: macos-13
@@ -44,6 +44,16 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: MacOs Dependencies
+        if: startsWith(runner.target, 'Macos')
+        run: |
+          brew install libssh
+
+      - name: Linux Dependencies
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          sudo apt-get update && sudo apt-get install -y libssh-dev
 
       - name: Build
         shell: bash

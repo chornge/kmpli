@@ -4,39 +4,53 @@ plugins {
 
 kotlin {
     macosX64("macosX64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
+        binaries {
+            executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+            }
         }
     }
     macosArm64("macosArm64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
+        binaries {
+            executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+            }
         }
     }
     linuxX64("linuxX64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
+        binaries {
+            executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+                linkerOpts("-lssh")
+            }
         }
     }
     linuxArm64("linuxArm64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
+        binaries {
+            executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+                linkerOpts("-lssh")
+            }
         }
     }
     mingwX64("mingwX64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
+        binaries {
+            executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+            }
         }
     }
     /*windowsArm64("windowsArm64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
+        binaries {
+            executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+            }
         }
     }*/
 
@@ -58,6 +72,7 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.ktor.client.curl)
+                implementation(libs.ktor.client.darwin)
                 implementation(libs.squareup.okio)
             }
         }
@@ -91,7 +106,7 @@ kotlin {
         val mingwX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-
+                implementation(libs.ktor.client.winhttp)
             }
         }
     }

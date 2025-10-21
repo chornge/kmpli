@@ -2,6 +2,8 @@ package io.chornge.kmpli
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.curl.Curl
+import io.ktor.client.engine.darwin.Darwin
+//import io.ktor.client.engine.winhttp.WinHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
@@ -124,14 +126,39 @@ actual fun Platform(): Platform = object : Platform {
     }
 }
 
-actual fun NetClient(): HttpClient {
-    return HttpClient(Curl) {
-        engine {
-            sslVerify = true
+actual fun NetClient(): HttpClient = when {
+    osName().contains("Darwin", ignoreCase = true) -> {
+        HttpClient(Darwin) {
+            engine {}
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+            }
+            expectSuccess = false
         }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 30_000
+    }
+
+    /*osName().contains("Windows", ignoreCase = true) ||
+            osName().contains("MINGW", ignoreCase = true) -> {
+        HttpClient(WinHttp) {
+            engine {
+                //protocolVersion = HttpProtocolVersion.HTTP_1_1
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+            }
+            expectSuccess = false
         }
-        expectSuccess = false
+    }*/
+
+    else -> {
+        HttpClient(Curl) {
+            engine {
+                sslVerify = true
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+            }
+            expectSuccess = false
+        }
     }
 }
