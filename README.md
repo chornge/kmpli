@@ -54,7 +54,7 @@ kmpli
 
 ```
   --name TEXT       Project name (optional)
-  --pid TEXT        Project ID (optional)
+  --pid TEXT        Package ID (optional)
   --template TEXT   Multiplatform template
                     shared-ui -> Shared UI App (Compose)
                     native-ui -> Native UI App (Compose + SwiftUI) 
@@ -63,7 +63,8 @@ kmpli
                     native-ui-amper -> Native UI App (configured with Amper)
   --platforms TEXT  Target platform(s)
                     android,ios(swiftui),web(react),desktop,server
-  --include-tests   Include Tests (optional)
+  --include-tests   Include sample tests (optional)
+  --help, -h        Show this help message
 ```
 
 To generate all the platforms (IOS with SwiftUI and Web with React/TS), with a name, project ID and with tests, run:
