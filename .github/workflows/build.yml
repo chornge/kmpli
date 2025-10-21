@@ -28,7 +28,6 @@ jobs:
             target: LinuxX64
 
           - os: ubuntu-22.04-arm
-            arch: arm64
             target: LinuxArm64
 
           - os: windows-latest
