@@ -26,10 +26,10 @@ chmod +x install.sh
 bash install.sh
 ```
 
-Windows (Powershell):
+Windows (Powershell - restart powershell after running):
 
 ```
-.\install.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
 ### Usage
