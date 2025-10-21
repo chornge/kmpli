@@ -105,7 +105,7 @@ class KmpliTest {
         cli.parse(args)
 
         assertTrue(io.printed.any { it.contains("Generating project for platform") })
-        assertTrue(io.printed.any { it.contains("✅ Project generation complete") })
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
         assertEquals(1, io.httpCalls.size)
         assertEquals(1, io.extractedDirs.size)
         assertEquals(1, io.replacedPlaceholders.size)
