@@ -34,12 +34,12 @@ actual fun Platform(): Platform = object : Platform {
             printLine("Downloaded ${bytes.size} bytes")
 
             if (contentType?.contains("html", ignoreCase = true) == true) {
-                printLine("⚠️ Warning: received HTML instead of ZIP — likely a TLS or redirect issue.")
+                printLine("⚠ Warning: received HTML instead of ZIP — likely a TLS or redirect issue.")
             }
 
             return bytes
         } catch (e: Exception) {
-            printLine("❌ HTTP request failed: ${e.message}")
+            printLine("HTTP request failed: ${e.message}")
             return ByteArray(0)
         }
     }
@@ -54,7 +54,7 @@ actual fun Platform(): Platform = object : Platform {
         // Unzip into current directory
         val exitCode = system("unzip -o $tmpZip -d .")
         if (exitCode != 0) {
-            printLine("❌ unzip failed with code $exitCode")
+            printLine("unzip failed with code $exitCode")
             FileSystem.SYSTEM.delete(tmpZip.toPath())
             return targetPath.toString()
         }
@@ -73,15 +73,15 @@ actual fun Platform(): Platform = object : Platform {
         // Rename/move to intended project name
         if (!FileSystem.SYSTEM.exists(targetPath)) {
             FileSystem.SYSTEM.atomicMove(extractedFolder, targetPath)
-            printLine("✅ Renamed ${extractedFolder.name} -> ${targetPath.name}")
+            printLine("Renamed ${extractedFolder.name} -> ${targetPath.name}")
         }
 
         // Sanity check
         val entries = FileSystem.SYSTEM.list(targetPath)
         if (entries.isEmpty()) {
-            printLine("❌ Extraction produced empty folder: $targetPath")
+            printLine("Extraction produced empty folder: $targetPath")
         } else {
-            printLine("✅ Extraction complete: $targetPath (${entries.size} items)")
+            printLine("Extraction complete: $targetPath (${entries.size} items)")
         }
 
         return targetPath.toString()
@@ -125,11 +125,9 @@ actual fun Platform(): Platform = object : Platform {
 }
 
 actual fun NetClient(): HttpClient {
-    return HttpClient(CIO) {
+    return HttpClient {
         engine {
-            https {
-                //
-            }
+            //
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000

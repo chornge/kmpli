@@ -36,7 +36,7 @@ class Kmpli(private val io: Platform = Platform()) {
             val extractedDir = io.extractZip(zipBytes, options.name!!)
             io.replacePlaceholders(extractedDir, options.name!!, options.pid!!, "com.jetbrains.kmpapp")
 
-            io.printLine("✅ Project generation complete!")
+            io.printLine("Project generation complete!")
             return@runBlocking
         }
 
@@ -55,7 +55,7 @@ class Kmpli(private val io: Platform = Platform()) {
         val extractedDir = io.extractZip(zipBytes, options.name!!)
         io.replacePlaceholders(extractedDir, options.name!!, options.pid!!, "org.example.project")
 
-        io.printLine("✅ Project generation complete!")
+        io.printLine("Project generation complete!")
     }
 
     private fun parseArgs(args: Array<String>): CliOptions {
