@@ -60,7 +60,8 @@ jobs:
       - name: Build binaries
         shell: bash
         run: |
-          ./gradlew linkReleaseExecutable${{ matrix.target }}
+          ./gradlew clean buildAllNative
+          ./gradlew clean linkReleaseExecutable${{ matrix.target }}
 
 #      - name: Copy binaries
 #        shell: bash
