@@ -9,19 +9,7 @@ kotlin {
             baseName = "kmpli"
         }
     }
-    macosArm64("macosArm64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
-        }
-    }
     linuxX64("linuxX64") {
-        binaries.executable {
-            entryPoint = "io.chornge.kmpli.main"
-            baseName = "kmpli"
-        }
-    }
-    linuxArm64("linuxArm64") {
         binaries.executable {
             entryPoint = "io.chornge.kmpli.main"
             baseName = "kmpli"
@@ -71,19 +59,7 @@ kotlin {
                 implementation(libs.ktor.client.darwin)
             }
         }
-        val macosArm64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-                implementation(libs.ktor.client.darwin)
-            }
-        }
         val linuxX64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-                implementation(libs.ktor.client.curl)
-            }
-        }
-        val linuxArm64Main by getting {
             dependsOn(nativeMain)
             dependencies {
                 implementation(libs.ktor.client.curl)
@@ -98,7 +74,7 @@ kotlin {
     }
 }
 
-val nativeTargets = listOf("MacosX64", "MacosArm64", "LinuxX64", "LinuxArm64", "MingwX64")
+val nativeTargets = listOf("MacosX64", "LinuxX64", "MingwX64")
 
 // Build all native binaries
 tasks.register("buildAllNative") {

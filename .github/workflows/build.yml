@@ -19,18 +19,10 @@ jobs:
           - os: macos-13
             arch: x64
             target: MacosX64
-          # macOS (Apple)
-          - os: macos-14
-            arch: arm64
-            target: MacosArm64
           # Linux (x64)
           - os: ubuntu-24.04
             arch: x64
             target: LinuxX64
-          # Linux (arm64)
-          - os: ubuntu-24.04
-            arch: arm64
-            target: LinuxArm64
           # Windows (x64)
           - os: windows-latest
             arch: x64
