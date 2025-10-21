@@ -13,8 +13,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version = { ref = "ktor" } }
 ktor-client-curl = { module = "io.ktor:ktor-client-curl", version = { ref = "ktor" } }
-ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version = { ref = "ktor" } }
-ktor-client-winhttp = { module = "io.ktor:ktor-client-winhttp", version = { ref = "ktor" } }
 squareup-okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 
 [plugins]

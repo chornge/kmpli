@@ -1,67 +1,66 @@
+import org.jetbrains.kotlin.konan.target.KonanTarget
+
+val host = org.jetbrains.kotlin.konan.target.HostManager.host
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
 
 kotlin {
-    macosX64("macosX64") {
-        binaries {
-            executable {
+    // Only configure the target matching the host
+    when (host) {
+        KonanTarget.MACOS_X64 -> macosX64("macosX64") {
+            binaries.executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+                // macOS linker options (openssl if needed)
+                //linkerOpts("-lssl", "-lcrypto")
+            }
+        }
+
+        KonanTarget.MACOS_ARM64 -> macosArm64("macosArm64") {
+            binaries.executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+                //linkerOpts("-lssl", "-lcrypto")
+            }
+        }
+
+        KonanTarget.LINUX_X64 -> linuxX64("linuxX64") {
+            binaries.executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+                linkerOpts("-lcurl") // disable SSH linking
+            }
+        }
+
+        KonanTarget.LINUX_ARM64 -> linuxArm64("linuxArm64") {
+            binaries.executable {
+                entryPoint = "io.chornge.kmpli.main"
+                baseName = "kmpli"
+                linkerOpts("-lcurl")
+            }
+        }
+
+        KonanTarget.MINGW_X64 -> mingwX64("mingwX64") {
+            binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
             }
         }
+
+        else -> throw GradleException("Unsupported host: $host")
     }
-    macosArm64("macosArm64") {
-        binaries {
-            executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
-            }
-        }
-    }
-    linuxX64("linuxX64") {
-        binaries {
-            executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
-                linkerOpts("-lssh")
-            }
-        }
-    }
-    linuxArm64("linuxArm64") {
-        binaries {
-            executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
-                linkerOpts("-lssh")
-            }
-        }
-    }
-    mingwX64("mingwX64") {
-        binaries {
-            executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
-            }
-        }
-    }
-    /*windowsArm64("windowsArm64") {
-        binaries {
-            executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
-            }
-        }
-    }*/
 
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation(libs.ktor.client.core)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.ktor.client.core)
             }
         }
+
         val commonTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
@@ -71,59 +70,42 @@ kotlin {
         val nativeMain by creating {
             dependsOn(commonMain)
             dependencies {
+                // Use Curl only for native targets, SSH disabled
                 implementation(libs.ktor.client.curl)
-                implementation(libs.ktor.client.darwin)
                 implementation(libs.squareup.okio)
             }
         }
 
-        val macosX64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-
-            }
-        }
-        val macosArm64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-
-            }
-        }
-
-        val linuxX64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-
-            }
-        }
-        val linuxArm64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-
-            }
-        }
-
-        val mingwX64Main by getting {
-            dependsOn(nativeMain)
-            dependencies {
-                implementation(libs.ktor.client.winhttp)
-            }
+        // Make the host target main depend on nativeMain
+        when (host) {
+            KonanTarget.MACOS_X64 -> sourceSets.getByName("macosX64Main").dependsOn(nativeMain)
+            KonanTarget.MACOS_ARM64 -> sourceSets.getByName("macosArm64Main").dependsOn(nativeMain)
+            KonanTarget.LINUX_X64 -> sourceSets.getByName("linuxX64Main").dependsOn(nativeMain)
+            KonanTarget.LINUX_ARM64 -> sourceSets.getByName("linuxArm64Main").dependsOn(nativeMain)
+            KonanTarget.MINGW_X64 -> sourceSets.getByName("mingwX64Main").dependsOn(nativeMain)
+            else -> {}
         }
     }
 }
 
-val nativeTargets = listOf("MacosX64", "MacosArm64", "LinuxX64", "LinuxArm64", "MingwX64")
+val nativeTargets = listOf(
+    "MacosX64",
+    "MacosArm64",
+    "LinuxX64",
+    "LinuxArm64",
+    "MingwX64"
+)
+
 tasks.register<Copy>("copyBinariesToDist") {
     group = "distribution"
-    description = "Copy all native binaries to the build/dist directory"
+    description = "Copy native binaries to build/dist"
 
     nativeTargets.forEach { target ->
         val binaryDir = layout.buildDirectory.dir("bin/$target/releaseExecutable")
         from(binaryDir) {
             include("*")
             rename { fileName ->
-                if (target.lowercase().startsWith("mingw")) fileName
-                else fileName.removeSuffix(".kexe")
+                if (target.lowercase().startsWith("mingw")) fileName else fileName.removeSuffix(".kexe")
             }
         }
         into(layout.buildDirectory.dir("dist/$target"))

@@ -45,21 +45,33 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: MacOs Dependencies
-        if: startsWith(runner.target, 'Macos')
+      - name: Mac Dependencies
+        if: startsWith(matrix.os, 'macos')
         run: |
-          brew install libssh
+          brew update
+          brew install openssl curl
 
       - name: Linux Dependencies
-        if: startsWith(runner.os, 'Linux')
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
-          sudo apt-get update && sudo apt-get install -y libssh-dev
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            build-essential \
+            pkg-config
+
+      - name: Windows Dependencies
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          choco install -y curl libssh2
 
       - name: Build
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew clean build
+          ./gradlew clean linkReleaseExecutable${{ matrix.target }}
 
       - name: Test
         shell: bash
