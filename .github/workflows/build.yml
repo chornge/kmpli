@@ -65,7 +65,9 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
         run: |
-          choco install -y curl libssh2
+          choco install -y curl openssl.light
+          # Optional fallback for missing packages (ignore failures)
+          try { choco install -y winlibs } catch { Write-Host "winlibs not found, continuing..." }
 
       - name: Build
         shell: bash
