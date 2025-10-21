@@ -15,7 +15,7 @@ interface Platform {
 
 expect fun Platform(): Platform
 
-expect fun HttpClient(): HttpClient
+expect fun NetClient(): HttpClient
 
 @OptIn(ExperimentalForeignApi::class)
 fun osName(): String = getenv("OSTYPE")?.toKString() ?: "unknown"

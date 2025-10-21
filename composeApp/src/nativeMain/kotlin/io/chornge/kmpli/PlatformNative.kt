@@ -1,9 +1,7 @@
 package io.chornge.kmpli
 
-//import io.ktor.client.*
-//import io.ktor.client.engine.curl.*
-//import io.ktor.client.engine.darwin.*
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
@@ -23,7 +21,7 @@ import okio.Path.Companion.toPath
 
 @OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
 actual fun Platform(): Platform = object : Platform {
-    private val client = HttpClient()
+    private val client = NetClient()
 
     override suspend fun httpGetBytes(url: String): ByteArray {
         printLine("Downloading from: $url")
@@ -127,29 +125,16 @@ actual fun Platform(): Platform = object : Platform {
     }
 }
 
-actual fun HttpClient(): HttpClient = when {
-    osName().contains("Darwin", ignoreCase = true) -> {
-        HttpClient(/*Darwin*/) {
-            install(HttpTimeout) {
-                requestTimeoutMillis = 30_000
+actual fun NetClient(): HttpClient {
+    return HttpClient(CIO) {
+        engine {
+            https {
+                //
             }
-            expectSuccess = false
         }
-    }
-
-    else -> {
-        HttpClient(/*Curl*/) {
-            engine {
-                /*configureCurl {
-                    // disable SSL verify (via libcurl flag)
-                    curl_easy_setopt(it, 64, 0) // peer verification
-                    curl_easy_setopt(it, 81, 0) // host verification
-                }*/
-            }
-            install(HttpTimeout) {
-                requestTimeoutMillis = 30_000
-            }
-            expectSuccess = false
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30_000
         }
+        expectSuccess = false
     }
 }

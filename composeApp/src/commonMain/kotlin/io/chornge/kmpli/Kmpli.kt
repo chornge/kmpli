@@ -122,6 +122,6 @@ class Kmpli(private val io: Platform = Platform()) {
         }
 
         val encodedSpec = io.urlEncode(Json.encodeToString(spec))
-        return "https://kmp.jetbrains.com/generateKmtProject?name=${io.urlEncode(name)}&id=${io.urlEncode(id)}&spec=$encodedSpec"
+        return "http://kmp.jetbrains.com/generateKmtProject?name=${io.urlEncode(name)}&id=${io.urlEncode(id)}&spec=$encodedSpec"
     }
 }

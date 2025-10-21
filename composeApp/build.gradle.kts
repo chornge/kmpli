@@ -9,7 +9,19 @@ kotlin {
             baseName = "kmpli"
         }
     }
+    macosArm64("macosArm64") {
+        binaries.executable {
+            entryPoint = "io.chornge.kmpli.main"
+            baseName = "kmpli"
+        }
+    }
     linuxX64("linuxX64") {
+        binaries.executable {
+            entryPoint = "io.chornge.kmpli.main"
+            baseName = "kmpli"
+        }
+    }
+    linuxArm64("linuxArm64") {
         binaries.executable {
             entryPoint = "io.chornge.kmpli.main"
             baseName = "kmpli"
@@ -33,14 +45,12 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.ktor.client.cio)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.content.negotiation)
             }
         }
         val commonTest by getting {
             dependencies {
-                implementation(libs.junit)
                 implementation(libs.kotlin.test)
             }
         }
@@ -48,33 +58,48 @@ kotlin {
         val nativeMain by creating {
             dependsOn(commonMain)
             dependencies {
+                implementation(libs.ktor.client.cio)
+                implementation(libs.ktor.network.tls)
                 implementation(libs.squareup.okio)
             }
         }
 
-        // Connect builds to nativeMain
         val macosX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
                 implementation(libs.ktor.client.darwin)
             }
         }
+        val macosArm64Main by getting {
+            dependsOn(nativeMain)
+            dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
+        }
+
         val linuxX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                implementation(libs.ktor.client.curl)
+                //implementation(libs.ktor.client.curl)
             }
         }
+        val linuxArm64Main by getting {
+            dependsOn(nativeMain)
+            dependencies {
+                //implementation(libs.ktor.client.curl)
+            }
+        }
+
         val mingwX64Main by getting {
             dependsOn(nativeMain)
             dependencies {
-                implementation(libs.ktor.client.curl)
+                implementation(libs.ktor.client.winhttp)
             }
         }
     }
 }
 
-val nativeTargets = listOf("MacosX64", "LinuxX64", "MingwX64")
+val nativeTargets = listOf("MacosX64", "MacosArm64", "LinuxX64", "LinuxArm64", "MingwX64")
 
 // Build all native binaries
 tasks.register("buildAllNative") {

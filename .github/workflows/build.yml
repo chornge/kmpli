@@ -15,15 +15,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS (Intel)
           - os: macos-13
             arch: x64
             target: MacosX64
-          # Linux (x64)
-          - os: ubuntu-24.04
+
+          - os: macos-latest
+            arch: arm64
+            target: MacosArm64
+
+          - os: ubuntu-latest
             arch: x64
             target: LinuxX64
-          # Windows (x64)
+
+          - os: ubuntu-24.04-arm64
+            arch: arm64
+            target: LinuxArm64
+
           - os: windows-latest
             arch: x64
             target: MingwX64
@@ -42,7 +49,7 @@ jobs:
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew build
+          ./gradlew clean build
 
       - name: Test
         shell: bash
