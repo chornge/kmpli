@@ -46,7 +46,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.content.negotiation)
             }
         }
         val commonTest by getting {
@@ -59,6 +58,7 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.ktor.client.cio)
+                implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.network.tls)
                 implementation(libs.squareup.okio)
             }
@@ -100,15 +100,6 @@ kotlin {
 }
 
 val nativeTargets = listOf("MacosX64", "MacosArm64", "LinuxX64", "LinuxArm64", "MingwX64")
-
-// Build all native binaries
-tasks.register("buildAllNative") {
-    group = "build"
-    description = "Build all Kotlin/Native executables"
-    dependsOn(nativeTargets.map { "linkReleaseExecutable$it" })
-}
-
-// Copy all binaries to `dist` folder
 tasks.register<Copy>("copyBinariesToDist") {
     group = "distribution"
     description = "Copy all native binaries to the build/dist directory"

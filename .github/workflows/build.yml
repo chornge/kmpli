@@ -27,7 +27,7 @@ jobs:
             arch: x64
             target: LinuxX64
 
-          - os: ubuntu-24.04-arm64
+          - os: ubuntu-24.04-arm
             arch: arm64
             target: LinuxArm64
 
@@ -55,12 +55,6 @@ jobs:
         shell: bash
         run: |
           ./gradlew allTests
-
-      - name: Build binaries
-        shell: bash
-        run: |
-          ./gradlew clean buildAllNative
-          ./gradlew clean linkReleaseExecutable${{ matrix.target }}
 
 #      - name: Copy binaries
 #        shell: bash

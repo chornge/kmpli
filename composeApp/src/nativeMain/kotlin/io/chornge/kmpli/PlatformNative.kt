@@ -120,7 +120,6 @@ actual fun Platform(): Platform = object : Platform {
     }
 
     override fun urlEncode(value: String): String {
-        // Simple percent-encoding
         return value.encodeURLPath()
     }
 }
