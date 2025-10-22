@@ -46,7 +46,7 @@ jobs:
              ".idea/*" \
              ".kotlin/*" \
              "build/*" \
-             "composeApp/build/* \
+             "composeApp/build/*" \
              "release/*"
 
       - name: Changelog
