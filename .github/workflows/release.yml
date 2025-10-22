@@ -18,6 +18,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libssl-dev
+
       - name: Build
         run: |
           chmod +x gradlew
