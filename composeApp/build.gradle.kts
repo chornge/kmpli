@@ -7,14 +7,11 @@ plugins {
 }
 
 kotlin {
-    // Only configure the target matching the host
     when (host) {
         KonanTarget.MACOS_X64 -> macosX64("macosX64") {
             binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
-                // macOS linker options (openssl if needed)
-                //linkerOpts("-lssl", "-lcrypto")
             }
         }
 
@@ -22,7 +19,6 @@ kotlin {
             binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
-                //linkerOpts("-lssl", "-lcrypto")
             }
         }
 
@@ -38,7 +34,7 @@ kotlin {
             binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
-                linkerOpts("-lcurl")
+                linkerOpts("-lcurl") // disable SSH linking
             }
         }
 
@@ -70,20 +66,18 @@ kotlin {
         val nativeMain by creating {
             dependsOn(commonMain)
             dependencies {
-                // Use Curl only for native targets, SSH disabled
                 implementation(libs.ktor.client.curl)
                 implementation(libs.squareup.okio)
             }
         }
 
-        // Make the host target main depend on nativeMain
         when (host) {
             KonanTarget.MACOS_X64 -> sourceSets.getByName("macosX64Main").dependsOn(nativeMain)
             KonanTarget.MACOS_ARM64 -> sourceSets.getByName("macosArm64Main").dependsOn(nativeMain)
             KonanTarget.LINUX_X64 -> sourceSets.getByName("linuxX64Main").dependsOn(nativeMain)
             KonanTarget.LINUX_ARM64 -> sourceSets.getByName("linuxArm64Main").dependsOn(nativeMain)
             KonanTarget.MINGW_X64 -> sourceSets.getByName("mingwX64Main").dependsOn(nativeMain)
-            else -> {}
+            else -> {} // Unsupported host
         }
     }
 }
