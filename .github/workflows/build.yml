@@ -74,9 +74,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libcurl4-openssl-dev \
-            libssl-dev \
-            build-essential \
-            pkg-config
+            libssl-dev
 
       - name: Windows Dependencies
         if: startsWith(matrix.os, 'windows')
@@ -90,7 +88,7 @@ jobs:
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew clean linkReleaseExecutable${{ matrix.target }}
+          ./gradlew clean compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
 
       - name: Test
         shell: bash

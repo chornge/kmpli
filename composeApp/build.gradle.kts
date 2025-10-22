@@ -26,7 +26,6 @@ kotlin {
             binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
-                linkerOpts("-lcurl") // disable SSH linking
             }
         }
 
@@ -34,7 +33,6 @@ kotlin {
             binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
-                linkerOpts("-lcurl") // disable SSH linking
             }
         }
 
