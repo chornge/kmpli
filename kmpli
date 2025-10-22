@@ -1,8 +1,22 @@
 #!/bin/bash
-if [ $# -eq 0 ]; then
-  # No arguments, run with default (Android, IOS with Compose UI) with tests
-  ./gradlew run --args="--include-tests"
-else
-  # Pass all provided arguments
-  ./gradlew run --args="$*"
-fi
+
+# No arguments will run default platform (Android, IOS using Compose UI engine) without tests.
+
+# Detect OS and architecture
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+case "$OS" in
+  darwin*)
+    ./composeApp/build/bin/macosX64/releaseExecutable/kmpli.kexe "$*"
+    ;;
+  linux*)
+    ./composeApp/build/bin/linuxX64/releaseExecutable/kmpli.kexe "$*"
+    ;;
+  msys*|cygwin*|mingw*)
+    ./composeApp/build/bin/mingwX64/releaseExecutable/kmpli.exe "$*"
+    ;;
+  *)
+    echo "❌ Unsupported OS: $OS"
+    exit 1
+    ;;
+esac
