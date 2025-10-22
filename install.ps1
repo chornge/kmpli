@@ -21,5 +21,3 @@ else
 {
     Write-Host "'kmpli' is already in PATH."
 }
-
-Write-Host "Installed 'kmpli' to $binDir"

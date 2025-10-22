@@ -22,7 +22,7 @@ If on:
 
 ### Installation
 
-```bash
+```
 git clone https://github.com/chornge/kmpli
 cd kmpli
 chmod +x gradlew
@@ -46,7 +46,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 
 To generate Android & IOS (Compose UI) targets (similar to kmp.jetbrains.com), run:
 
-```
+```bash
 kmpli
 ```
 
