@@ -3,10 +3,35 @@ name: Release
 on:
   push:
     tags: [ "v*.*.*" ]
+  workflow_dispatch:
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build-binaries:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            target: MacosX64
+            binary_name: kmpli-macos-x64
+            binary_path: composeApp/build/bin/macosX64/releaseExecutable/kmpli.kexe
+
+          - os: macos-latest
+            target: MacosArm64
+            binary_name: kmpli-macos-arm64
+            binary_path: composeApp/build/bin/macosArm64/releaseExecutable/kmpli.kexe
+
+          - os: ubuntu-latest
+            target: LinuxX64
+            binary_name: kmpli-linux-x64
+            binary_path: composeApp/build/bin/linuxX64/releaseExecutable/kmpli.kexe
+
+          - os: windows-latest
+            target: MingwX64
+            binary_name: kmpli-windows-x64.exe
+            binary_path: composeApp/build/bin/mingwX64/releaseExecutable/kmpli.exe
 
     steps:
       - name: Checkout
@@ -18,54 +43,163 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Dependencies
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-
+
+      - name: Mac Dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: brew install openssl curl
+
+      - name: Linux Dependencies
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libcurl4-openssl-dev \
-            libssl-dev
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+
+      - name: Windows Dependencies
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          choco install -y curl openssl.light
+          try { choco install -y winlibs } catch { Write-Host "winlibs not found, continuing..." }
 
       - name: Build
+        shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew build
+          ./gradlew clean compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
 
-      - name: Package
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary_name }}
+          path: ${{ matrix.binary_path }}
+          retention-days: 1
+
+  create-release:
+    name: Create Release
+    needs: build-binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download All Binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release-binaries
+
+      - name: Prepare Release Assets
         run: |
-          rm -rf release
-          mkdir release
-          
+          mkdir -p release
+
+          # Copy and rename binaries
+          cp release-binaries/kmpli-macos-x64/kmpli.kexe release/kmpli-macos-x64
+          cp release-binaries/kmpli-macos-arm64/kmpli.kexe release/kmpli-macos-arm64
+          cp release-binaries/kmpli-linux-x64/kmpli.kexe release/kmpli-linux-x64
+          cp release-binaries/kmpli-windows-x64.exe/kmpli.exe release/kmpli-windows-x64.exe
+
+          chmod +x release/kmpli-*
+
+          # Create source archive
           VERSION=${GITHUB_REF/refs\/tags\//}
           echo "RELEASE_NAME=$VERSION" >> $GITHUB_ENV
-          
-          zip -r "release/kmpli.zip" . \
-          -x ".DS_Store" \
-             ".git/*" \
-             ".github/*" \
-             ".gradle/*" \
-             ".idea/*" \
-             ".kotlin/*" \
-             "build/*" \
-             "composeApp/build/*" \
-             "release/*"
 
-      - name: Changelog
+          zip -r "release/kmpli-source.zip" . \
+            -x ".DS_Store" \
+               ".git/*" \
+               ".github/*" \
+               ".gradle/*" \
+               ".idea/*" \
+               ".kotlin/*" \
+               "build/*" \
+               "composeApp/build/*" \
+               "release/*" \
+               "release-binaries/*"
+
+      - name: Generate Changelog
         run: |
           # Get all commits from the previous tag to this tag
-          git fetch --prune --unshallow
-          PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF}^)
-          RELEASE_NOTES=$(git log ${PREV_TAG}..${GITHUB_REF} --pretty=format:"- %s")
+          PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF}^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            RELEASE_NOTES=$(git log ${PREV_TAG}..${GITHUB_REF} --pretty=format:"- %s")
+          else
+            RELEASE_NOTES="Initial release"
+          fi
+
+          # Add download instructions
+          cat >> release-notes.md << EOF
+          ## Installation
+
+          ### Quick Install (Recommended)
+
+          Clone the repository and run the installer:
+
+          \`\`\`bash
+          git clone https://github.com/chornge/kmpli
+          cd kmpli
+          \`\`\`
+
+          **macOS/Linux:**
+          \`\`\`bash
+          bash install.sh
+          \`\`\`
+
+          **Windows (PowerShell):**
+          \`\`\`powershell
+          powershell -ExecutionPolicy Bypass -File install.ps1
+          \`\`\`
+
+          The installer will set up the launcher script. The appropriate binary for your platform will be automatically downloaded on first run.
+
+          ### Manual Download
+
+          Download the appropriate binary for your platform:
+          - **macOS (Apple Silicon)**: \`kmpli-macos-arm64\`
+          - **macOS (Intel)**: \`kmpli-macos-x64\`
+          - **Linux (x64)**: \`kmpli-linux-x64\`
+          - **Windows (x64)**: \`kmpli-windows-x64.exe\`
+
+          Make it executable and move to your PATH.
+
+          ## Changes
+
+          $RELEASE_NOTES
+          EOF
+
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          cat release-notes.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Release
-        if: success() # previous steps were successful
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
           name: ${{ env.RELEASE_NAME }}
           body: ${{ env.RELEASE_NOTES }}
-          files: release/kmpli.zip
+          files: |
+            release/kmpli-macos-x64
+            release/kmpli-macos-arm64
+            release/kmpli-linux-x64
+            release/kmpli-windows-x64.exe
+            release/kmpli-source.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
