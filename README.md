@@ -10,6 +10,21 @@ configuring with Amper, and test setups.
 
 ### Installation
 
+**Prerequisites (Required)**
+
+Before installing kmpli, you **must** install OpenSSL and curl for SSL/TLS support:
+
+```bash
+# macOS
+brew install openssl curl
+
+# Linux (Debian/Ubuntu)
+sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev
+
+# Windows
+choco install -y curl openssl.light
+```
+
 **Quick Install (Recommended)**
 
 Clone the repository and run the installer:
@@ -93,17 +108,72 @@ kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="ios,desktop,web,s
 To generate a template project. Shared UI or Native UI or Barebones KMP library. Pick one:
 
 ```
-kmpli --template="shared-ui"
-kmpli --template="native-ui"
-kmpli --template="library"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="library"
 ```
 
 To generate a template configured with Amper (only available with Shared UI or Native UI). Pick one:
 
 ```
-kmpli --template="shared-ui-amper"
-kmpli --template="native-ui-amper"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui-amper"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui-amper"
 ```
+
+### Troubleshooting
+
+#### SSL/TLS Certificate Errors
+
+If you encounter an error like:
+
+```
+TLS verification failed for request
+SSL peer certificate or SSH remote key was not OK
+```
+
+This means your system is missing SSL certificates or curl cannot find them.
+
+**Solution:**
+
+1. **Install OpenSSL** (if not already installed):
+   ```bash
+   # macOS
+   brew install openssl curl
+
+   # Linux (Debian/Ubuntu)
+   sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev
+
+   # Windows
+   choco install -y curl openssl.light
+   ```
+
+2. **Verify installation**:
+   ```bash
+   # macOS - check if cert.pem exists
+   ls -la /etc/ssl/cert.pem
+   ls -la /opt/homebrew/etc/openssl/cert.pem  # Apple Silicon
+   ls -la /usr/local/etc/openssl/cert.pem     # Intel
+   ```
+
+3. **Manual CA bundle path** (if auto-detection fails):
+   ```bash
+   # Set environment variable before running kmpli
+   export CURL_CA_BUNDLE=/path/to/cert.pem
+   kmpli --name="CMPProject" --pid="org.cmp.project"
+   ```
+
+4. **macOS specific**: If you recently installed/updated Homebrew, you may need to link openssl:
+   ```bash
+   brew link openssl
+   # or for specific version
+   brew link openssl@3
+   ```
+
+#### Other Issues
+
+- **Binary not found**: Make sure you've run the installer and restarted your terminal
+- **Permission denied**: On Unix systems, ensure the binary is executable: `chmod +x ~/.kmpli/bin/kmpli-*`
+- **Command not found**: Check that the install directory is in your PATH
 
 ### License
 
