@@ -8,39 +8,50 @@ A command-line interface (CLI) designed to streamline the creation of new Kotlin
 projects. It offers a flexible way to generate customized project configurations and directory structures, including
 configuring with Amper, and test setups.
 
-### Requirements
-
-Kotlin or Compose Multiplatform dev environment (IntelliJ, Android Studio) with JDK-17+, Gradle, Git.
-
-If on:
-
-• macOS (homebrew): `brew install openssl curl`
-
-• linux: `sudo apt-get install -y libcurl4-openssl-dev libssl-dev build-essential pkg-config`
-
-• windows (chocolatey): `choco install -y curl libssh2`
-
 ### Installation
 
-```
+**Quick Install (Recommended)**
+
+Clone the repository and run the installer:
+
+```bash
 git clone https://github.com/chornge/kmpli
 cd kmpli
+```
+
+**macOS/Linux:**
+
+```bash
+bash install.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+The installer sets up a launcher that automatically downloads the appropriate binary for your platform on first run. No
+build required!
+
+### Building from Source (Optional)
+
+If you prefer to build from source or need to contribute:
+
+**Requirements:** JDK-17+, Gradle, Git, and platform-specific dependencies:
+
+- **macOS**: `brew install openssl curl`
+- **Linux**: `sudo apt-get install -y libcurl4-openssl-dev libssl-dev`
+- **Windows**: `choco install -y curl openssl.light`
+
+**Build:**
+
+```bash
 chmod +x gradlew
 ./gradlew build
 ```
 
-Mac/Linux:
-
-```bash
-chmod +x install.sh
-bash install.sh
-```
-
-Windows (Powershell - restart powershell after running):
-
-```
-powershell -ExecutionPolicy Bypass -File install.ps1
-```
+Then run the installer as shown above. The launcher will use your locally built binary instead of downloading.
 
 ### Usage
 
