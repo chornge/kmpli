@@ -149,34 +149,10 @@ actual fun Platform(): Platform = object : Platform {
     }
 }
 
-@OptIn(ExperimentalForeignApi::class)
 actual fun NetClient(): HttpClient {
     return HttpClient(Curl) {
         engine {
             sslVerify = true
-
-            // Set CA bundle path via environment variable if not already set
-            // This helps curl find SSL certificates on macOS
-            if (getenv("CURL_CA_BUNDLE") == null && getenv("SSL_CERT_FILE") == null) {
-                val caBundlePaths = listOf(
-                    "/etc/ssl/cert.pem",                        // macOS (from brew openssl)
-                    "/opt/homebrew/etc/openssl/cert.pem",       // macOS Apple Silicon (brew)
-                    "/usr/local/etc/openssl/cert.pem",          // macOS Intel (brew)
-                    "/usr/local/etc/openssl@3/cert.pem",        // macOS (brew openssl@3)
-                    "/etc/ssl/certs/ca-certificates.crt",       // Linux (Debian/Ubuntu)
-                    "/etc/pki/tls/certs/ca-bundle.crt",         // Linux (CentOS/RHEL)
-                    "/etc/ssl/ca-bundle.pem"                    // Linux (openSUSE)
-                )
-
-                // Find first existing CA bundle and set it
-                val caBundle = caBundlePaths.firstOrNull { path ->
-                    access(path, F_OK) == 0
-                }
-
-                if (caBundle != null) {
-                    setenv("CURL_CA_BUNDLE", caBundle, 1)
-                }
-            }
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000
