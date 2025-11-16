@@ -1,22 +1,137 @@
 #!/bin/bash
 
-# No arguments will run default platform (Android, IOS using Compose UI engine) without tests.
+# Kmpli launcher - auto-downloads and runs the appropriate binary for your platform
+
+set -e
+
+REPO="chornge/kmpli"
+CACHE_DIR="$HOME/.kmpli/bin"
 
 # Detect OS and architecture
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
 
+# Determine platform-specific details
 case "$OS" in
   darwin*)
-    ./composeApp/build/bin/macosX64/releaseExecutable/kmpli.kexe "$*"
+    case "$ARCH" in
+      arm64)
+        PLATFORM_NAME="macosArm64"
+        BINARY_NAME="kmpli-macos-arm64"
+        DISPLAY_NAME="macOS ARM64 (Apple Silicon)"
+        ;;
+      x86_64)
+        PLATFORM_NAME="macosX64"
+        BINARY_NAME="kmpli-macos-x64"
+        DISPLAY_NAME="macOS x64 (Intel)"
+        ;;
+      *)
+        echo "❌ Unsupported macOS architecture: $ARCH"
+        echo "   Supported: arm64 (Apple Silicon), x86_64 (Intel)"
+        exit 1
+        ;;
+    esac
     ;;
   linux*)
-    ./composeApp/build/bin/linuxX64/releaseExecutable/kmpli.kexe "$*"
+    case "$ARCH" in
+      aarch64)
+        PLATFORM_NAME="linuxArm64"
+        BINARY_NAME="kmpli-linux-arm64"
+        DISPLAY_NAME="Linux ARM64"
+        ;;
+      x86_64)
+        PLATFORM_NAME="linuxX64"
+        BINARY_NAME="kmpli-linux-x64"
+        DISPLAY_NAME="Linux x64"
+        ;;
+      *)
+        echo "❌ Unsupported Linux architecture: $ARCH"
+        echo "   Supported: aarch64 (ARM64), x86_64 (x64)"
+        exit 1
+        ;;
+    esac
     ;;
   msys*|cygwin*|mingw*)
-    ./composeApp/build/bin/mingwX64/releaseExecutable/kmpli.exe "$*"
+    case "$ARCH" in
+      x86_64)
+        PLATFORM_NAME="mingwX64"
+        BINARY_NAME="kmpli-windows-x64.exe"
+        DISPLAY_NAME="Windows x64"
+        ;;
+      *)
+        echo "❌ Unsupported Windows architecture: $ARCH"
+        echo "   Supported: x86_64 (x64)"
+        exit 1
+        ;;
+    esac
     ;;
   *)
-    echo "❌ Unsupported OS: $OS"
+    echo "❌ Unsupported operating system: $OS (architecture: $ARCH)"
+    echo "   Supported platforms:"
+    echo "   - macOS (x86_64, arm64)"
+    echo "   - Linux (x86_64, aarch64)"
+    echo "   - Windows (x86_64)"
     exit 1
     ;;
 esac
+
+# Check for locally built binary first (for development)
+LOCAL_BUILD_PATH="./composeApp/build/bin/$PLATFORM_NAME/releaseExecutable/kmpli.kexe"
+if [[ "$PLATFORM_NAME" == "mingwX64" ]]; then
+  LOCAL_BUILD_PATH="./composeApp/build/bin/$PLATFORM_NAME/releaseExecutable/kmpli.exe"
+fi
+
+if [ -f "$LOCAL_BUILD_PATH" ]; then
+  exec "$LOCAL_BUILD_PATH" "$@"
+fi
+
+# Check for cached binary
+CACHED_BINARY="$CACHE_DIR/$BINARY_NAME"
+if [ -f "$CACHED_BINARY" ]; then
+  exec "$CACHED_BINARY" "$@"
+fi
+
+# Download binary from GitHub releases
+echo "🔍 Detecting platform: $DISPLAY_NAME"
+echo "📦 Downloading kmpli binary..."
+
+# Create cache directory
+mkdir -p "$CACHE_DIR"
+
+# Get the latest release tag
+LATEST_TAG=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+if [ -z "$LATEST_TAG" ]; then
+  echo "❌ Failed to fetch latest release information"
+  echo "   Please check your internet connection or visit:"
+  echo "   https://github.com/$REPO/releases"
+  exit 1
+fi
+
+echo "📥 Downloading version $LATEST_TAG..."
+
+# Download the binary
+DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/$BINARY_NAME"
+TEMP_FILE="$CACHE_DIR/$BINARY_NAME.tmp"
+
+if ! curl -L -f -o "$TEMP_FILE" "$DOWNLOAD_URL" 2>/dev/null; then
+  echo "❌ Failed to download binary from:"
+  echo "   $DOWNLOAD_URL"
+  echo ""
+  echo "   This might mean:"
+  echo "   1. No release exists for your platform ($DISPLAY_NAME)"
+  echo "   2. You need to build from source:"
+  echo "      ./gradlew build"
+  echo "      bash install.sh"
+  exit 1
+fi
+
+# Make it executable and move to final location
+chmod +x "$TEMP_FILE"
+mv "$TEMP_FILE" "$CACHED_BINARY"
+
+echo "✅ Successfully downloaded kmpli"
+echo ""
+
+# Execute the binary
+exec "$CACHED_BINARY" "$@"
