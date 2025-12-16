@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
+          - os: macos-14
             target: MacosX64
             binary_name: kmpli-macos-x64
             binary_path: composeApp/build/bin/macosX64/releaseExecutable/kmpli.kexe
