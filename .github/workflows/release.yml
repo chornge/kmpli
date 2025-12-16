@@ -2,8 +2,15 @@ name: Release
 
 on:
   push:
-    tags: [ "v*.*.*" ]
+    tags: ["v*.*.*"]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   build-binaries:
@@ -38,10 +45,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup JDK-17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -82,7 +89,7 @@ jobs:
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew clean compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
+          ./gradlew compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
 
       - name: Upload Binary
         uses: actions/upload-artifact@v4
@@ -119,9 +126,16 @@ jobs:
 
           chmod +x release/kmpli-*
 
+          # Compute SHA256 hashes
+          echo "SHA_MACOS_X64=$(sha256sum release/kmpli-macos-x64 | cut -d ' ' -f 1)" >> $GITHUB_ENV
+          echo "SHA_MACOS_ARM64=$(sha256sum release/kmpli-macos-arm64 | cut -d ' ' -f 1)" >> $GITHUB_ENV
+          echo "SHA_LINUX_X64=$(sha256sum release/kmpli-linux-x64 | cut -d ' ' -f 1)" >> $GITHUB_ENV
+          echo "SHA_WINDOWS_X64=$(sha256sum release/kmpli-windows-x64.exe | cut -d ' ' -f 1)" >> $GITHUB_ENV
+
           # Create source archive
           VERSION=${GITHUB_REF/refs\/tags\//}
           echo "RELEASE_NAME=$VERSION" >> $GITHUB_ENV
+          echo "VERSION_NUMBER=${VERSION#v}" >> $GITHUB_ENV
 
           zip -r "release/kmpli-source.zip" . \
             -x ".DS_Store" \
@@ -151,24 +165,29 @@ jobs:
 
           ### Quick Install (Recommended)
 
-          Clone the repository and run the installer:
-
-          \`\`\`bash
-          git clone https://github.com/chornge/kmpli
-          cd kmpli
-          \`\`\`
-
           **macOS/Linux:**
           \`\`\`bash
-          bash install.sh
+          curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
           \`\`\`
 
           **Windows (PowerShell):**
           \`\`\`powershell
-          powershell -ExecutionPolicy Bypass -File install.ps1
+          irm https://raw.githubusercontent.com/chornge/kmpli/main/install.ps1 | iex
           \`\`\`
 
           The installer will set up the launcher script. The appropriate binary for your platform will be automatically downloaded on first run.
+
+          ### Package Managers
+
+          **Homebrew (macOS/Linux):**
+          \`\`\`bash
+          brew tap chornge/kmpli && brew install kmpli
+          \`\`\`
+
+          **Scoop (Windows):**
+          \`\`\`powershell
+          scoop bucket add kmpli https://github.com/chornge/kmpli && scoop install kmpli
+          \`\`\`
 
           ### Manual Download
 
@@ -201,5 +220,78 @@ jobs:
             release/kmpli-linux-x64
             release/kmpli-windows-x64.exe
             release/kmpli-source.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Formula
+        run: |
+          cat > Formula/kmpli.rb << EOF
+          class Kmpli < Formula
+            desc "CLI tool for generating Kotlin Multiplatform projects"
+            homepage "https://github.com/chornge/kmpli"
+            version "${VERSION_NUMBER}"
+            license "Apache-2.0"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-macos-arm64"
+                sha256 "${SHA_MACOS_ARM64}"
+              else
+                url "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-macos-x64"
+                sha256 "${SHA_MACOS_X64}"
+              end
+            end
+
+            on_linux do
+              url "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-linux-x64"
+              sha256 "${SHA_LINUX_X64}"
+            end
+
+            def install
+              binary_name = stable.url.split("/").last
+              bin.install binary_name => "kmpli"
+            end
+
+            test do
+              assert_match "Usage:", shell_output("\#{bin}/kmpli --help")
+            end
+          end
+          EOF
+
+      - name: Update Scoop Manifest
+        run: |
+          cat > bucket/kmpli.json << EOF
+          {
+            "version": "${VERSION_NUMBER}",
+            "description": "CLI tool for generating Kotlin Multiplatform projects",
+            "homepage": "https://github.com/chornge/kmpli",
+            "license": "Apache-2.0",
+            "architecture": {
+              "64bit": {
+                "url": "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-windows-x64.exe",
+                "hash": "${SHA_WINDOWS_X64}"
+              }
+            },
+            "bin": [
+              ["kmpli-windows-x64.exe", "kmpli"]
+            ],
+            "checkver": "github",
+            "autoupdate": {
+              "architecture": {
+                "64bit": {
+                  "url": "https://github.com/chornge/kmpli/releases/download/v\$version/kmpli-windows-x64.exe"
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Commit Package Manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kmpli.rb bucket/kmpli.json
+          git commit -m "Update package manifests for ${RELEASE_NAME}"
+          git push origin HEAD:main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

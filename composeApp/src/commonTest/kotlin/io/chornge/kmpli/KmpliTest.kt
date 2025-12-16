@@ -53,7 +53,6 @@ class KmpliTest {
         assertTrue(io.printed.any { it.contains("Unknown argument") })
     }
 
-    // Template mode
     @Test
     fun testTemplateGeneration_flow() {
         val args = arrayOf("--template=shared-ui", "--name=Foo", "--pid=org.foo")
@@ -65,7 +64,6 @@ class KmpliTest {
         assertEquals(1, io.replacedPlaceholders.size)
     }
 
-    // Platform mode
     @Test
     fun testParsePlatforms_default() {
         val platforms = cli.parsePlatforms(null)
@@ -109,5 +107,96 @@ class KmpliTest {
         assertEquals(1, io.httpCalls.size)
         assertEquals(1, io.extractedDirs.size)
         assertEquals(1, io.replacedPlaceholders.size)
+    }
+
+    @Test
+    fun testProjectName_valid() {
+        cli.parse(arrayOf("--name=MyProject", "--pid=org.test"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testProjectName_valid_withSpaces() {
+        cli.parse(arrayOf("--name=My Project", "--pid=org.test"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testProjectName_valid_startsWithDigit() {
+        cli.parse(arrayOf("--name=1MyProject", "--pid=org.test"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testProjectName_valid_withHyphensUnderscores() {
+        cli.parse(arrayOf("--name=My-Project_Name", "--pid=org.test"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testProjectName_invalid_specialChars() {
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=My@Project!", "--pid=org.test"))
+        }
+    }
+
+    @Test
+    fun testPackageId_valid() {
+        cli.parse(arrayOf("--name=Test", "--pid=org.example"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_valid_withUnderscore() {
+        cli.parse(arrayOf("--name=Test", "--pid=org.example_app"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_valid_trailingUnderscore() {
+        cli.parse(arrayOf("--name=Test", "--pid=a.a_"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_invalid_hyphen() {
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=Test", "--pid=org.example-app"))
+        }
+    }
+
+    @Test
+    fun testPackageId_invalid_uppercase() {
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=Test", "--pid=Org.Example"))
+        }
+    }
+
+    @Test
+    fun testPackageId_invalid_startsWithDigit() {
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=Test", "--pid=org.1example"))
+        }
+    }
+
+    @Test
+    fun testPackageId_invalid_emptySegment() {
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=Test", "--pid=org..example"))
+        }
+    }
+
+    @Test
+    fun testPlatform_invalid_name() {
+        assertFailsWith<IllegalStateException> {
+            cli.parsePlatforms("invalid_platform")
+        }
+    }
+
+    @Test
+    fun testPlatform_invalid_uiForPlatform() {
+        assertFailsWith<IllegalStateException> {
+            cli.parsePlatforms("android(swiftui)")  // swiftui only valid for ios
+        }
     }
 }

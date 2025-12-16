@@ -50,6 +50,14 @@ if (-not $LATEST_TAG)
     exit 1
 }
 
+# Validate tag format (prevents command injection)
+if (-not ($LATEST_TAG -match '^v\d+\.\d+\.\d+$'))
+{
+    Write-Host "❌ Invalid release tag format: $LATEST_TAG" -ForegroundColor Red
+    Write-Host "   Expected format: vX.Y.Z (e.g., v1.2.3)" -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "📥 Downloading version $LATEST_TAG..." -ForegroundColor Cyan
 
 # Download the binary

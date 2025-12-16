@@ -19,7 +19,7 @@ import platform.posix.*
 import okio.FileSystem
 import okio.Path.Companion.toPath
 
-@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
+@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class, kotlin.experimental.ExperimentalNativeApi::class)
 actual fun Platform(): Platform = object : Platform {
     private val client = NetClient()
 
@@ -27,15 +27,23 @@ actual fun Platform(): Platform = object : Platform {
         printLine("Downloading from: $url")
         try {
             val response = client.get(url)
+
+            // Validate HTTP status code
+            val statusCode = response.status.value
+            if (statusCode !in 200..299) {
+                throw IllegalStateException("HTTP $statusCode: ${response.status.description}")
+            }
+
             val contentType = response.headers["Content-Type"]
             printLine("Content-Type: $contentType")
 
-            val bytes = response.bodyAsChannel().toByteArray()
-            printLine("Downloaded ${bytes.size} bytes")
-
+            // Warn if we got HTML instead of a ZIP (likely TLS/redirect issue)
             if (contentType?.contains("html", ignoreCase = true) == true) {
                 printLine("⚠ Warning: received HTML instead of ZIP — likely a TLS or redirect issue.")
             }
+
+            val bytes = response.bodyAsChannel().toByteArray()
+            printLine("Downloaded ${bytes.size} bytes")
 
             return bytes
         } catch (e: Exception) {
@@ -76,10 +84,18 @@ actual fun Platform(): Platform = object : Platform {
         FileSystem.SYSTEM.write(tmpZip.toPath()) { write(zipBytes) }
         printLine("Saved ZIP to $tmpZip")
 
-        // Unzip into current directory
-        val exitCode = system("unzip -o $tmpZip -d .")
+        // Use platform-appropriate extraction command
+        // Windows 10+ has built-in tar that supports zip files
+        // macOS/Linux use unzip
+        val isWindows = kotlin.native.Platform.osFamily == kotlin.native.OsFamily.WINDOWS
+        val exitCode = if (isWindows) {
+            system("tar -xf $tmpZip")
+        } else {
+            system("unzip -o $tmpZip -d .")
+        }
         if (exitCode != 0) {
-            printLine("unzip failed with code $exitCode")
+            val cmd = if (isWindows) "tar" else "unzip"
+            printLine("$cmd failed with code $exitCode")
             FileSystem.SYSTEM.delete(tmpZip.toPath())
             return targetPath.toString()
         }

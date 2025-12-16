@@ -5,19 +5,58 @@ import kotlinx.serialization.json.*
 
 class Kmpli(private val io: Platform = Platform()) {
 
+    companion object {
+        // Valid project name: Latin letters, digits, spaces, underscores, hyphens (1-50 chars)
+        private val PROJECT_NAME_REGEX = Regex("^[a-zA-Z0-9][a-zA-Z0-9 _-]{0,49}$")
+        // Valid package ID: each segment starts with lowercase letter, contains lowercase letters, digits, or underscores
+        private val PACKAGE_ID_REGEX = Regex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$")
+        // Package ID length limit (reasonable max for Java packages)
+        private const val MAX_PACKAGE_ID_LENGTH = 100
+        // Valid platforms
+        private val VALID_PLATFORMS = setOf("android", "ios", "desktop", "web", "server")
+        // Valid UI frameworks per platform
+        private val VALID_UI = mapOf(
+            "android" to setOf("compose"),
+            "ios" to setOf("compose", "swiftui"),
+            "desktop" to setOf("compose"),
+            "web" to setOf("compose", "react")
+        )
+    }
+
+    private fun validateProjectName(name: String): String {
+        if (!PROJECT_NAME_REGEX.matches(name)) {
+            error("Invalid project name: '$name'. Only Latin characters, digits, spaces, '_' and '-' are allowed (1-50 chars)")
+        }
+        return name
+    }
+
+    private fun validatePackageId(pid: String): String {
+        if (pid.length > MAX_PACKAGE_ID_LENGTH) {
+            error("Package ID too long: ${pid.length} chars (max: $MAX_PACKAGE_ID_LENGTH)")
+        }
+        if (!PACKAGE_ID_REGEX.matches(pid)) {
+            error("Invalid package ID: '$pid'. Must be a valid Java package name (e.g., org.example.app)")
+        }
+        return pid
+    }
+
     fun parse(args: Array<String>) = runBlocking {
         val options = parseArgs(args)
 
         if (options.help == true) {
-            io.printLine("Usage: ./kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")
+            io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")
             io.printLine("")
             io.printLine("Options:")
-            io.printLine("  --name           Project name")
-            io.printLine("  --pid            Package identifier")
+            io.printLine("  --name           Project name (alphanumeric, hyphens, underscores)")
+            io.printLine("  --pid            Package identifier (e.g., org.example.app)")
             io.printLine("  --platforms      Comma-separated list of targets")
-            io.printLine("  --template       Predefined project template (e.g., shared-ui)")
+            io.printLine("  --template       Predefined project template")
             io.printLine("  --include-tests  Include sample tests")
             io.printLine("  --help, -h       Show this help message")
+            io.printLine("")
+            io.printLine("Platforms: android, ios, desktop, web, server")
+            io.printLine("UI options: compose (default), swiftui (ios), react (web)")
+            io.printLine("Templates: shared-ui, native-ui, library, shared-ui-amper, native-ui-amper")
             return@runBlocking
         }
 
@@ -27,14 +66,18 @@ class Kmpli(private val io: Platform = Platform()) {
             if (options.pid == null)
                 options.pid = "org.cmp.${options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")}"
 
+            // Validate inputs
+            val validatedName = validateProjectName(options.name!!)
+            val validatedPid = validatePackageId(options.pid!!)
+
             val selectedTemplate = Template.fromId(templateName)
                 ?: error("Invalid template name: $templateName\nAvailable: ${Template.availableTemplates()}")
 
             io.printLine("Generating template: ${selectedTemplate.id} -> ${selectedTemplate.description}")
 
             val zipBytes = io.httpGetBytes(selectedTemplate.url)
-            val extractedDir = io.extractZip(zipBytes, options.name!!)
-            io.replacePlaceholders(extractedDir, options.name!!, options.pid!!, "com.jetbrains.kmpapp")
+            val extractedDir = io.extractZip(zipBytes, validatedName)
+            io.replacePlaceholders(extractedDir, validatedName, validatedPid, "com.jetbrains.kmpapp")
 
             io.printLine("Project generation complete!")
             return@runBlocking
@@ -45,15 +88,19 @@ class Kmpli(private val io: Platform = Platform()) {
         if (options.name == null) options.name = "CMPProject"
         if (options.pid == null) options.pid = "org.cmp.${options.name!!.lowercase()}"
 
-        val url = buildUrl(options.name!!, options.pid!!, parsedPlatforms, options.includeTests)
+        // Validate inputs
+        val validatedName = validateProjectName(options.name!!)
+        val validatedPid = validatePackageId(options.pid!!)
+
+        val url = buildUrl(validatedName, validatedPid, parsedPlatforms, options.includeTests)
 
         io.printLine("Generating project for platform(s):")
         parsedPlatforms.forEach { io.printLine("• ${it.name}${it.ui?.let { " ($it)" } ?: ""}") }
         if (options.includeTests) io.printLine("• including tests")
 
         val zipBytes = io.httpGetBytes(url)
-        val extractedDir = io.extractZip(zipBytes, options.name!!)
-        io.replacePlaceholders(extractedDir, options.name!!, options.pid!!, "org.example.project")
+        val extractedDir = io.extractZip(zipBytes, validatedName)
+        io.replacePlaceholders(extractedDir, validatedName, validatedPid, "org.example.project")
 
         io.printLine("Project generation complete!")
     }
@@ -94,8 +141,20 @@ class Kmpli(private val io: Platform = Platform()) {
         val raw = input?.takeIf { it.isNotBlank() } ?: "android(compose),ios(compose)"
         return raw.split(",").map { part ->
             val match = Regex("""(\w+)(\(([^)]+)\))?""").find(part.trim())
-            val name = match?.groupValues?.get(1)?.lowercase() ?: error("Invalid: $part")
-            val ui = match.groupValues[3].ifBlank { "compose" }
+            val name = match?.groupValues?.get(1)?.lowercase() ?: error("Invalid platform format: $part")
+            val ui = match.groupValues[3].ifBlank { "compose" }.lowercase()
+
+            // Validate platform name
+            if (name !in VALID_PLATFORMS) {
+                error("Invalid platform: '$name'. Valid platforms: ${VALID_PLATFORMS.joinToString(", ")}")
+            }
+
+            // Validate UI framework for platform
+            val validUiForPlatform = VALID_UI[name]
+            if (validUiForPlatform != null && ui !in validUiForPlatform) {
+                error("Invalid UI '$ui' for platform '$name'. Valid options: ${validUiForPlatform.joinToString(", ")}")
+            }
+
             PlatformConfig(name, ui)
         }
     }

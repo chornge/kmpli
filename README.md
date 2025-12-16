@@ -21,11 +21,38 @@ brew install openssl curl
 # Linux (Debian/Ubuntu)
 sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev
 
-# Windows
+# Windows (Scoop)
+scoop install curl openssl
+
+# Windows (Chocolatey)
 choco install -y curl openssl.light
 ```
 
-**Quick Install (Recommended)**
+**macOS/Linux (Homebrew):**
+
+```bash
+brew tap chornge/kmpli
+brew install kmpli
+```
+
+**Windows (Scoop):**
+
+```powershell
+scoop bucket add kmpli https://github.com/chornge/kmpli
+scoop install kmpli
+```
+
+**Quick Install (curl):**
+
+```bash
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/chornge/kmpli/main/install.ps1 | iex
+```
+
+**Alternative Install (git):**
 
 Clone the repository and run the installer:
 
@@ -34,13 +61,13 @@ git clone https://github.com/chornge/kmpli
 cd kmpli
 ```
 
-**macOS/Linux:**
+macOS/Linux:
 
 ```bash
 bash install.sh
 ```
 
-**Windows (PowerShell):**
+Windows (PowerShell):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1
@@ -83,7 +110,7 @@ kmpli
   --pid TEXT        Package ID (optional)
   --template TEXT   Multiplatform template
                     shared-ui -> Shared UI App (Compose)
-                    native-ui -> Native UI App (Compose + SwiftUI) 
+                    native-ui -> Native UI App (Compose + SwiftUI)
                     library -> Bare-bones Multiplatform Library
                     shared-ui-amper -> Shared UI App (configured with Amper)
                     native-ui-amper -> Native UI App (configured with Amper)
@@ -136,6 +163,7 @@ This means your system is missing SSL certificates or curl cannot find them.
 **Solution:**
 
 1. **Install OpenSSL** (if not already installed):
+
    ```bash
    # macOS
    brew install openssl curl
@@ -143,11 +171,15 @@ This means your system is missing SSL certificates or curl cannot find them.
    # Linux (Debian/Ubuntu)
    sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev
 
-   # Windows
+   # Windows (Scoop)
+   scoop install curl openssl
+
+   # Windows (Chocolatey - alternative)
    choco install -y curl openssl.light
    ```
 
 2. **Verify installation**:
+
    ```bash
    # macOS - check if cert.pem exists
    ls -la /etc/ssl/cert.pem
@@ -156,6 +188,7 @@ This means your system is missing SSL certificates or curl cannot find them.
    ```
 
 3. **Manual CA bundle path** (if auto-detection fails):
+
    ```bash
    # Set environment variable before running kmpli
    export CURL_CA_BUNDLE=/path/to/cert.pem
