@@ -54,7 +54,7 @@ if (-not $LATEST_TAG)
 if (-not ($LATEST_TAG -match '^v\d+\.\d+\.\d+$'))
 {
     Write-Host "❌ Invalid release tag format: $LATEST_TAG" -ForegroundColor Red
-    Write-Host "   Expected format: vX.Y.Z (e.g., v1.2.4)" -ForegroundColor Yellow
+    Write-Host "   Expected format: vX.Y.Z (e.g., v1.2.5)" -ForegroundColor Yellow
     exit 1
 }
 
