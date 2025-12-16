@@ -1,7 +1,7 @@
 class Kmpli < Formula
   desc "CLI tool for generating Kotlin Multiplatform projects"
   homepage "https://github.com/chornge/kmpli"
-  version "1.2.5"
+  version "1.2.6"
   license "Apache-2.0"
 
   on_macos do

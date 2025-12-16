@@ -223,75 +223,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Homebrew Formula
+      - name: Print Package Manifest Info
         run: |
-          cat > Formula/kmpli.rb << EOF
-          class Kmpli < Formula
-            desc "CLI tool for generating Kotlin Multiplatform projects"
-            homepage "https://github.com/chornge/kmpli"
-            version "${VERSION_NUMBER}"
-            license "Apache-2.0"
-
-            on_macos do
-              if Hardware::CPU.arm?
-                url "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-macos-arm64"
-                sha256 "${SHA_MACOS_ARM64}"
-              else
-                url "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-macos-x64"
-                sha256 "${SHA_MACOS_X64}"
-              end
-            end
-
-            on_linux do
-              url "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-linux-x64"
-              sha256 "${SHA_LINUX_X64}"
-            end
-
-            def install
-              binary_name = stable.url.split("/").last
-              bin.install binary_name => "kmpli"
-            end
-
-            test do
-              assert_match "Usage:", shell_output("\#{bin}/kmpli --help")
-            end
-          end
-          EOF
-
-      - name: Update Scoop Manifest
-        run: |
-          cat > bucket/kmpli.json << EOF
-          {
-            "version": "${VERSION_NUMBER}",
-            "description": "CLI tool for generating Kotlin Multiplatform projects",
-            "homepage": "https://github.com/chornge/kmpli",
-            "license": "Apache-2.0",
-            "architecture": {
-              "64bit": {
-                "url": "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-windows-x64.exe",
-                "hash": "${SHA_WINDOWS_X64}"
-              }
-            },
-            "bin": [
-              ["kmpli-windows-x64.exe", "kmpli"]
-            ],
-            "checkver": "github",
-            "autoupdate": {
-              "architecture": {
-                "64bit": {
-                  "url": "https://github.com/chornge/kmpli/releases/download/v\$version/kmpli-windows-x64.exe"
-                }
-              }
-            }
-          }
-          EOF
-
-      - name: Commit Package Manifests
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/kmpli.rb bucket/kmpli.json
-          git commit -m "Update package manifests for ${RELEASE_NAME}"
-          git push origin HEAD:main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "=========================================="
+          echo "Package Manifest Update Info"
+          echo "=========================================="
+          echo ""
+          echo "Version: ${VERSION_NUMBER}"
+          echo "Release: ${RELEASE_NAME}"
+          echo ""
+          echo "SHA256 Checksums:"
+          echo "  macOS x64:   ${SHA_MACOS_X64}"
+          echo "  macOS arm64: ${SHA_MACOS_ARM64}"
+          echo "  Linux x64:   ${SHA_LINUX_X64}"
+          echo "  Windows x64: ${SHA_WINDOWS_X64}"
+          echo ""
+          echo "To update Homebrew/Scoop manifests, update:"
+          echo "  - Formula/kmpli.rb"
+          echo "  - bucket/kmpli.json"
+          echo "with the version and checksums above."
+          echo "=========================================="
