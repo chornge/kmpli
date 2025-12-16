@@ -6,7 +6,7 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/chornge/kmpli/releases/download/v1.2.6/kmpli-windows-x64.exe",
-      "hash": ""
+      "hash": "fca5e3685b4e84a704316dfb41e8a768ecf0f436ae50a2e61a7a97d73d06f3a7"
     }
   },
   "bin": [
