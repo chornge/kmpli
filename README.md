@@ -31,7 +31,7 @@ choco install -y curl openssl.light
 **macOS/Linux (Homebrew):**
 
 ```bash
-brew tap chornge/kmpli
+brew tap chornge/kmpli https://github.com/chornge/kmpli
 brew install kmpli
 ```
 

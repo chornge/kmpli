@@ -7,16 +7,16 @@ class Kmpli < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/chornge/kmpli/releases/download/v#{version}/kmpli-macos-arm64"
-      sha256 "9265df6300d478e899cdcc3a05863cada037e73e1b25e8df7c8ff12e1d391f6b"
+      sha256 "9b7befb7c27380f302648aa5f0d690f1f970adfbac5f9fd8d4f7856bb600cd82"
     else
       url "https://github.com/chornge/kmpli/releases/download/v#{version}/kmpli-macos-x64"
-      sha256 "79dc6c3c317df11dc9f5c6a3cba7eb62788719e65f6f66d40c322dc7502493ee"
+      sha256 "6c0038706ee27f5df14725c82218b5b7715de53bc6f934c52b934d08b6356ac9"
     end
   end
 
   on_linux do
     url "https://github.com/chornge/kmpli/releases/download/v#{version}/kmpli-linux-x64"
-    sha256 "6c65eae01e237b9ad73407253c11faf1c9413e490302df539601e4f174c65915"
+    sha256 "b13fc62e2124343dab2092ab2f306b47013c18bea5d546d213fa03720a0e64fc"
   end
 
   def install
