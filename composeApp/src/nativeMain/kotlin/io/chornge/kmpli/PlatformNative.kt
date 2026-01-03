@@ -102,9 +102,12 @@ actual fun Platform(): Platform = object : Platform {
 
         FileSystem.SYSTEM.delete(tmpZip.toPath())
 
-        // Detect the actual extracted folder (e.g. "KMP-App-Template-main")
+        // Detect the actual extracted folder (e.g. "KMP-App-Template-main", "multiplatform-library-template-main")
         val extractedFolder = FileSystem.SYSTEM.list("./".toPath()).firstOrNull {
-            it.name != projectName && it.name.contains("KMP-App-Template")
+            it.name != projectName && (
+                it.name.contains("KMP-App-Template") ||
+                it.name.contains("multiplatform-library-template")
+            )
         }
 
         if (extractedFolder == null) {
@@ -129,7 +132,13 @@ actual fun Platform(): Platform = object : Platform {
     }
 
     override fun replacePlaceholders(dirPath: String, name: String, pid: String, oldPid: String) {
-        // Simple POSIX-based traversal (use okio)
+        // First, replace file contents
+        replaceFileContents(dirPath, name, pid, oldPid)
+        // Then, rename package directories
+        renamePackageDirectories(dirPath, pid, oldPid)
+    }
+
+    private fun replaceFileContents(dirPath: String, name: String, pid: String, oldPid: String) {
         val dir = opendir(dirPath)
         if (dir != null) {
             var entry = readdir(dir)
@@ -140,19 +149,142 @@ actual fun Platform(): Platform = object : Platform {
                     val statBuf = nativeHeap.alloc<stat>()
                     stat(fullPath, statBuf.ptr)
                     if ((statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u) {
-                        replacePlaceholders(fullPath, name, pid, oldPid)
+                        replaceFileContents(fullPath, name, pid, oldPid)
                     } else {
-                        val content = FileSystem.SYSTEM.read(fullPath.toPath()) { readUtf8() }
-                            .replace(oldPid, pid)
-                            .replace("KotlinProject", name)
-                            .replace("KMP-App-Template", name)
-                        FileSystem.SYSTEM.write(fullPath.toPath()) { writeUtf8(content) }
+                        try {
+                            val content = FileSystem.SYSTEM.read(fullPath.toPath()) { readUtf8() }
+                                .replace(oldPid, pid)
+                                .replace("KotlinProject", name)
+                                .replace("KMP-App-Template", name)
+                            FileSystem.SYSTEM.write(fullPath.toPath()) { writeUtf8(content) }
+                        } catch (_: Exception) {
+                            // Skip binary files that can't be read as UTF-8
+                        }
                     }
                     nativeHeap.free(statBuf.ptr)
                 }
                 entry = readdir(dir)
             }
             closedir(dir)
+        }
+    }
+
+    private fun renamePackageDirectories(dirPath: String, pid: String, oldPid: String) {
+        // Convert package IDs to path format (e.g., "com.jetbrains.kmpapp" -> "com/jetbrains/kmpapp")
+        val oldPath = oldPid.replace('.', '/')
+        val newPath = pid.replace('.', '/')
+
+        if (oldPath == newPath) return
+
+        // Find and rename all occurrences of the old package path
+        findAndRenamePackageDirs(dirPath, oldPath, newPath)
+    }
+
+    private fun findAndRenamePackageDirs(basePath: String, oldPkgPath: String, newPkgPath: String) {
+        val dir = opendir(basePath)
+        if (dir != null) {
+            val entries = mutableListOf<String>()
+            var entry = readdir(dir)
+            while (entry != null) {
+                val fname = entry.pointed.d_name.toKString()
+                if (fname != "." && fname != "..") {
+                    entries.add(fname)
+                }
+                entry = readdir(dir)
+            }
+            closedir(dir)
+
+            for (fname in entries) {
+                val fullPath = "$basePath/$fname"
+                val statBuf = nativeHeap.alloc<stat>()
+                stat(fullPath, statBuf.ptr)
+                val isDir = (statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u
+                nativeHeap.free(statBuf.ptr)
+
+                if (isDir) {
+                    // Check if this directory path ends with the old package path
+                    val relativePath = fullPath.removePrefix("./")
+                    if (relativePath.endsWith(oldPkgPath)) {
+                        // Found the old package directory, rename it
+                        val newFullPath = fullPath.replace(oldPkgPath, newPkgPath)
+                        createParentDirs(newFullPath)
+                        moveDirectoryContents(fullPath, newFullPath)
+                        removeEmptyParentDirs(fullPath, oldPkgPath)
+                    } else {
+                        // Continue searching recursively
+                        findAndRenamePackageDirs(fullPath, oldPkgPath, newPkgPath)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun createParentDirs(path: String) {
+        val parentPath = path.substringBeforeLast('/')
+        if (parentPath.isNotEmpty() && parentPath != path) {
+            FileSystem.SYSTEM.createDirectories(parentPath.toPath())
+        }
+    }
+
+    private fun moveDirectoryContents(srcDir: String, destDir: String) {
+        FileSystem.SYSTEM.createDirectories(destDir.toPath())
+
+        val dir = opendir(srcDir)
+        if (dir != null) {
+            val entries = mutableListOf<String>()
+            var entry = readdir(dir)
+            while (entry != null) {
+                val fname = entry.pointed.d_name.toKString()
+                if (fname != "." && fname != "..") {
+                    entries.add(fname)
+                }
+                entry = readdir(dir)
+            }
+            closedir(dir)
+
+            for (fname in entries) {
+                val srcPath = "$srcDir/$fname".toPath()
+                val destPath = "$destDir/$fname".toPath()
+                FileSystem.SYSTEM.atomicMove(srcPath, destPath)
+            }
+        }
+    }
+
+    private fun removeEmptyParentDirs(path: String, oldPkgPath: String) {
+        // Remove empty directories up to the first segment of the old package path
+        val segments = oldPkgPath.split('/')
+        var currentPath = path
+
+        for (i in segments.indices.reversed()) {
+            val statBuf = nativeHeap.alloc<stat>()
+            val exists = stat(currentPath, statBuf.ptr) == 0
+            nativeHeap.free(statBuf.ptr)
+
+            if (exists) {
+                val dir = opendir(currentPath)
+                if (dir != null) {
+                    var isEmpty = true
+                    var entry = readdir(dir)
+                    while (entry != null) {
+                        val fname = entry.pointed.d_name.toKString()
+                        if (fname != "." && fname != "..") {
+                            isEmpty = false
+                            break
+                        }
+                        entry = readdir(dir)
+                    }
+                    closedir(dir)
+
+                    if (isEmpty) {
+                        rmdir(currentPath)
+                        currentPath = currentPath.substringBeforeLast('/')
+                    } else {
+                        break
+                    }
+                }
+            } else {
+                break
+            }
         }
     }
 

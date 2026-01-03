@@ -77,7 +77,7 @@ class Kmpli(private val io: Platform = Platform()) {
 
             val zipBytes = io.httpGetBytes(selectedTemplate.url)
             val extractedDir = io.extractZip(zipBytes, validatedName)
-            io.replacePlaceholders(extractedDir, validatedName, validatedPid, "com.jetbrains.kmpapp")
+            io.replacePlaceholders(extractedDir, validatedName, validatedPid, selectedTemplate.oldPackageId)
 
             io.printLine("Project generation complete!")
             return@runBlocking
