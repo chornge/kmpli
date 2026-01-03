@@ -223,23 +223,81 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Print Package Manifest Info
+      - name: Update Homebrew Formula
         run: |
-          echo "=========================================="
-          echo "Package Manifest Update Info"
-          echo "=========================================="
-          echo ""
-          echo "Version: ${VERSION_NUMBER}"
-          echo "Release: ${RELEASE_NAME}"
-          echo ""
-          echo "SHA256 Checksums:"
-          echo "  macOS x64:   ${SHA_MACOS_X64}"
-          echo "  macOS arm64: ${SHA_MACOS_ARM64}"
-          echo "  Linux x64:   ${SHA_LINUX_X64}"
-          echo "  Windows x64: ${SHA_WINDOWS_X64}"
-          echo ""
-          echo "To update Homebrew/Scoop manifests, update:"
-          echo "  - Formula/kmpli.rb"
-          echo "  - bucket/kmpli.json"
-          echo "with the version and checksums above."
-          echo "=========================================="
+          cat > Formula/kmpli.rb << 'FORMULA_EOF'
+          class Kmpli < Formula
+            desc "CLI tool for generating Kotlin Multiplatform projects"
+            homepage "https://github.com/chornge/kmpli"
+          FORMULA_EOF
+          echo "  version \"${VERSION_NUMBER}\"" >> Formula/kmpli.rb
+          cat >> Formula/kmpli.rb << 'FORMULA_EOF'
+            license "Apache-2.0"
+
+            on_macos do
+              if Hardware::CPU.arm?
+          FORMULA_EOF
+          echo "      url \"https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-macos-arm64\"" >> Formula/kmpli.rb
+          echo "      sha256 \"${SHA_MACOS_ARM64}\"" >> Formula/kmpli.rb
+          cat >> Formula/kmpli.rb << 'FORMULA_EOF'
+              else
+          FORMULA_EOF
+          echo "      url \"https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-macos-x64\"" >> Formula/kmpli.rb
+          echo "      sha256 \"${SHA_MACOS_X64}\"" >> Formula/kmpli.rb
+          cat >> Formula/kmpli.rb << 'FORMULA_EOF'
+              end
+            end
+
+            on_linux do
+          FORMULA_EOF
+          echo "    url \"https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-linux-x64\"" >> Formula/kmpli.rb
+          echo "    sha256 \"${SHA_LINUX_X64}\"" >> Formula/kmpli.rb
+          cat >> Formula/kmpli.rb << 'FORMULA_EOF'
+            end
+
+            def install
+              binary_name = stable.url.split("/").last
+              bin.install binary_name => "kmpli"
+            end
+
+            test do
+              assert_match "Usage:", shell_output("#{bin}/kmpli --help")
+            end
+          end
+          FORMULA_EOF
+
+      - name: Update Scoop Manifest
+        run: |
+          cat > bucket/kmpli.json << EOF
+          {
+            "version": "${VERSION_NUMBER}",
+            "description": "CLI tool for generating Kotlin Multiplatform projects",
+            "homepage": "https://github.com/chornge/kmpli",
+            "license": "Apache-2.0",
+            "architecture": {
+              "64bit": {
+                "url": "https://github.com/chornge/kmpli/releases/download/${RELEASE_NAME}/kmpli-windows-x64.exe",
+                "hash": "${SHA_WINDOWS_X64}"
+              }
+            },
+            "bin": [
+              ["kmpli-windows-x64.exe", "kmpli"]
+            ],
+            "checkver": "github",
+            "autoupdate": {
+              "architecture": {
+                "64bit": {
+                  "url": "https://github.com/chornge/kmpli/releases/download/v\$version/kmpli-windows-x64.exe"
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Commit Package Manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kmpli.rb bucket/kmpli.json
+          git commit -m "Update package manifests for ${RELEASE_NAME}"
+          git push https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/chornge/kmpli.git HEAD:main

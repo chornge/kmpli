@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2026-01-02
+
+### Added
+
+- Package directory renaming to match `--pid` parameter (e.g., `com/jetbrains/kmpapp` → `io/example/myapp`)
+- Support for library template folder detection during extraction
+
+### Fixed
+
+- Library template (`--template="library"`) now correctly renames extracted folder to project name
+- Native UI templates now use correct package ID for replacements
+- Each template now has its own `oldPackageId` for accurate placeholder replacement
+
+### Changed
+
+- Templates now store their default package ID for proper placeholder replacement
+- CI/CD uses `macos-15-intel` runner for macOS x64 builds (replacing retired `macos-13`)
+
 ## [1.2.6] - 2025-12-16
 
 ### Added

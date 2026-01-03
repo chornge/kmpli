@@ -1,4 +1,5 @@
 ![CI/CD](https://github.com/chornge/kmpli/actions/workflows/build.yml/badge.svg?branch=main)
+![Downloads](https://img.shields.io/github/downloads/chornge/kmpli/total)
 
 # Kmpli
 
@@ -16,10 +17,10 @@ Before installing kmpli, you **must** install OpenSSL and curl for SSL/TLS suppo
 
 ```bash
 # macOS
-brew install openssl curl
+brew install curl openssl
 
 # Linux (Debian/Ubuntu)
-sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev
+sudo apt-get install -y ca-certificates curl libcurl4-openssl-dev libssl-dev
 
 # Windows (Scoop)
 scoop install curl openssl
