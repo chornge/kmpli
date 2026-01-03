@@ -1,12 +1,12 @@
 {
-  "version": "1.2.7",
+  "version": "1.2.9",
   "description": "CLI tool for generating Kotlin Multiplatform projects",
   "homepage": "https://github.com/chornge/kmpli",
   "license": "Apache-2.0",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/chornge/kmpli/releases/download/v1.2.7/kmpli-windows-x64.exe",
-      "hash": "7e7932e7cce283143a0e3c350580c6fb3047d82a8cdf570e3fc7eecb8c6f80b0"
+      "url": "https://github.com/chornge/kmpli/releases/download/v1.2.9/kmpli-windows-x64.exe",
+      "hash": "31741d89c5e7d2f82e9126dabfd634a19579ad84b18feaa9411d57f7c2c27736"
     }
   },
   "bin": [
