@@ -213,10 +213,6 @@ This means your system is missing SSL certificates or curl cannot find them.
 
 [Apache-2.0](LICENSE)
 
-### Contributing
-
-Contributions are welcome! Please fork the repository and create a pull request with your changes.
-
 ### Acknowledgments
 
 - Inspired by a need to create Kotlin/Compose Multiplatform projects without the need for a GUI.
