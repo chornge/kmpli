@@ -1,4 +1,4 @@
-.PHONY: build test clean release install uninstall help
+.PHONY: build test clean release install uninstall sanity help
 
 # Detect OS
 UNAME_S := $(shell uname -s)
@@ -53,6 +53,7 @@ help:
 	@echo "  release    Build release binary for current platform"
 	@echo "  install    Build and install kmpli to $(INSTALL_DIR)"
 	@echo "  uninstall  Remove kmpli from $(INSTALL_DIR)"
+	@echo "  sanity     Run clean, test, and build"
 	@echo "  help       Show this help message"
 	@echo ""
 	@echo "Detected: $(UNAME_S) $(UNAME_M)"
@@ -68,6 +69,8 @@ clean:
 
 release:
 	./gradlew $(RELEASE_TASK)
+
+sanity: clean test build
 
 install: release
 ifeq ($(UNAME_S),Darwin)
