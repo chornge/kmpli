@@ -63,7 +63,7 @@ actual fun Platform(): Platform = object : Platform {
                 printLine("Please install OpenSSL:")
                 printLine("")
                 printLine("  macOS:   brew install openssl curl")
-                printLine("  Linux:   sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev")
+                printLine("  Linux:   sudo apt-get install -y ca-certificates curl libcurl4-openssl-dev libssl-dev")
                 printLine("  Windows: choco install -y curl openssl.light")
                 printLine("")
                 printLine("After installing, try running kmpli again.")
@@ -89,9 +89,9 @@ actual fun Platform(): Platform = object : Platform {
         // macOS/Linux use unzip
         val isWindows = kotlin.native.Platform.osFamily == kotlin.native.OsFamily.WINDOWS
         val exitCode = if (isWindows) {
-            system("tar -xf $tmpZip")
+            system("tar -xf \"$tmpZip\"")
         } else {
-            system("unzip -o $tmpZip -d .")
+            system("unzip -o \"$tmpZip\" -d .")
         }
         if (exitCode != 0) {
             val cmd = if (isWindows) "tar" else "unzip"
@@ -147,21 +147,24 @@ actual fun Platform(): Platform = object : Platform {
                 if (fname != "." && fname != "..") {
                     val fullPath = "$dirPath/$fname"
                     val statBuf = nativeHeap.alloc<stat>()
-                    stat(fullPath, statBuf.ptr)
-                    if ((statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u) {
-                        replaceFileContents(fullPath, name, pid, oldPid)
-                    } else {
-                        try {
-                            val content = FileSystem.SYSTEM.read(fullPath.toPath()) { readUtf8() }
-                                .replace(oldPid, pid)
-                                .replace("KotlinProject", name)
-                                .replace("KMP-App-Template", name)
-                            FileSystem.SYSTEM.write(fullPath.toPath()) { writeUtf8(content) }
-                        } catch (_: Exception) {
-                            // Skip binary files that can't be read as UTF-8
+                    try {
+                        stat(fullPath, statBuf.ptr)
+                        if ((statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u) {
+                            replaceFileContents(fullPath, name, pid, oldPid)
+                        } else {
+                            try {
+                                val content = FileSystem.SYSTEM.read(fullPath.toPath()) { readUtf8() }
+                                    .replace(oldPid, pid)
+                                    .replace("KotlinProject", name)
+                                    .replace("KMP-App-Template", name)
+                                FileSystem.SYSTEM.write(fullPath.toPath()) { writeUtf8(content) }
+                            } catch (_: okio.IOException) {
+                                // Skip binary files that can't be read as UTF-8
+                            }
                         }
+                    } finally {
+                        nativeHeap.free(statBuf.ptr)
                     }
-                    nativeHeap.free(statBuf.ptr)
                 }
                 entry = readdir(dir)
             }
@@ -197,9 +200,13 @@ actual fun Platform(): Platform = object : Platform {
             for (fname in entries) {
                 val fullPath = "$basePath/$fname"
                 val statBuf = nativeHeap.alloc<stat>()
-                stat(fullPath, statBuf.ptr)
-                val isDir = (statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u
-                nativeHeap.free(statBuf.ptr)
+                val isDir: Boolean
+                try {
+                    stat(fullPath, statBuf.ptr)
+                    isDir = (statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u
+                } finally {
+                    nativeHeap.free(statBuf.ptr)
+                }
 
                 if (isDir) {
                     // Check if this directory path ends with the old package path
@@ -257,8 +264,12 @@ actual fun Platform(): Platform = object : Platform {
 
         for (i in segments.indices.reversed()) {
             val statBuf = nativeHeap.alloc<stat>()
-            val exists = stat(currentPath, statBuf.ptr) == 0
-            nativeHeap.free(statBuf.ptr)
+            val exists: Boolean
+            try {
+                exists = stat(currentPath, statBuf.ptr) == 0
+            } finally {
+                nativeHeap.free(statBuf.ptr)
+            }
 
             if (exists) {
                 val dir = opendir(currentPath)

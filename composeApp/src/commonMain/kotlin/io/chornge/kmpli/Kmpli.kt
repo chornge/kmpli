@@ -63,8 +63,12 @@ class Kmpli(private val io: Platform = Platform()) {
         // Handle template
         options.template?.let { templateName ->
             if (options.name == null) options.name = "CMPProject"
-            if (options.pid == null)
-                options.pid = "org.cmp.${options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")}"
+            if (options.pid == null) {
+                val safeName = options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")
+                // Package segments must start with a letter, not a digit
+                val validSegment = if (safeName.isEmpty() || safeName[0].isDigit()) "project" else safeName
+                options.pid = "org.cmp.$validSegment"
+            }
 
             // Validate inputs
             val validatedName = validateProjectName(options.name!!)
@@ -86,7 +90,12 @@ class Kmpli(private val io: Platform = Platform()) {
         // Handle platform-based generation
         val parsedPlatforms = parsePlatforms(options.platforms)
         if (options.name == null) options.name = "CMPProject"
-        if (options.pid == null) options.pid = "org.cmp.${options.name!!.lowercase()}"
+        if (options.pid == null) {
+            val safeName = options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")
+            // Package segments must start with a letter, not a digit
+            val validSegment = if (safeName.isEmpty() || safeName[0].isDigit()) "project" else safeName
+            options.pid = "org.cmp.$validSegment"
+        }
 
         // Validate inputs
         val validatedName = validateProjectName(options.name!!)
