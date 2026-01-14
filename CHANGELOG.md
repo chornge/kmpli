@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Interactive TUI wizard when running `kmpli` with no arguments
+- Arrow-key navigation on supported terminals, numbered prompts as fallback
+- Circular navigation (wrap-around) for arrow keys in selection lists
+- Back navigation throughout the wizard with state persistence
+- Cursor position preservation in platform toggle selection
+- Vim-style j/k keys for navigation
+- Styled interface with color palette
+- UI framework selection for iOS (Compose/SwiftUI) and Web (Compose/React) in TUI
+- Default hints for project name (CMPProject) and package ID (org.example.app)
+
+### Fixed
+
+- Memory leaks in native platform operations (proper try-finally for nativeHeap allocations)
+- Inconsistent default package ID generation between template and platform modes
+- Invalid package ID generation when project name starts with a digit
+- Overly broad exception catching in file operations (now catches only IOException)
+- ZIP extraction failing when project name contains spaces
+
+### Changed
+
+- Default package ID now sanitizes special characters and handles edge cases
+
 ## [1.2.11] - 2026-01-02
 
 ### Changed

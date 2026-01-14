@@ -84,7 +84,7 @@ If you prefer to build from source or need to contribute:
 **Requirements:** JDK-17+, Gradle, Git, and platform-specific dependencies:
 
 - **macOS**: `brew install openssl curl`
-- **Linux**: `sudo apt-get install -y libcurl4-openssl-dev libssl-dev`
+- **Linux**: `sudo apt-get install -y curl libcurl4-openssl-dev libssl-dev`
 - **Windows**: `choco install -y curl openssl.light`
 
 **Build:**
@@ -98,10 +98,29 @@ Then run the installer as shown above. The launcher will use your locally built 
 
 ### Usage
 
-To generate Android & IOS (Compose UI) targets (similar to kmp.jetbrains.com), run:
+#### Interactive Mode (Recommended)
+
+Simply run `kmpli` with no arguments to launch the interactive wizard:
 
 ```bash
 kmpli
+```
+
+The wizard guides you through project setup with:
+
+- Template or custom platform selection
+- Project name and package ID configuration
+- Test inclusion options
+- Summary and confirmation before generation
+
+On supported terminals, use arrow keys to navigate. Otherwise, enter numbered choices.
+
+#### Command-Line Mode
+
+For scripting or CI/CD pipelines, use command-line flags:
+
+```bash
+kmpli --name="CMPProject" --pid="org.cmp.project"
 ```
 
 #### Usage Options
@@ -170,7 +189,7 @@ This means your system is missing SSL certificates or curl cannot find them.
    brew install openssl curl
 
    # Linux (Debian/Ubuntu)
-   sudo apt-get install -y ca-certificates libcurl4-openssl-dev libssl-dev
+   sudo apt-get install -y ca-certificates curl libcurl4-openssl-dev libssl-dev
 
    # Windows (Scoop)
    scoop install curl openssl

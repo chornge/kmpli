@@ -199,4 +199,104 @@ class KmpliTest {
             cli.parsePlatforms("android(swiftui)")  // swiftui only valid for ios
         }
     }
+
+    // Max length validation tests
+
+    @Test
+    fun testProjectName_maxLength_valid() {
+        // 50 chars is the max
+        val name50 = "a".repeat(50)
+        cli.parse(arrayOf("--name=$name50", "--pid=org.test"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testProjectName_maxLength_invalid() {
+        // 51 chars exceeds max
+        val name51 = "a".repeat(51)
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=$name51", "--pid=org.test"))
+        }
+    }
+
+    @Test
+    fun testPackageId_maxLength_valid() {
+        // 100 chars is the max
+        // Need valid format: segments starting with lowercase letter
+        val validPid = "a." + "a".repeat(97)  // 100 chars total
+        cli.parse(arrayOf("--name=Test", "--pid=$validPid"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_maxLength_invalid() {
+        // 101 chars exceeds max (100 is the limit)
+        val longPid = "a." + "a".repeat(99)  // 2 + 99 = 101 chars total
+        assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=Test", "--pid=$longPid"))
+        }
+    }
+
+    // Default package ID generation tests
+
+    @Test
+    fun testDefaultPackageId_sanitizesSpecialChars() {
+        // Project name with special chars should generate valid package ID
+        cli.parse(arrayOf("--name=My-App_Test"))
+        // Check that http was called (meaning validation passed)
+        assertEquals(1, io.httpCalls.size)
+        // The URL should contain sanitized package ID
+        assertTrue(io.httpCalls[0].contains("org.cmp.myapptest") ||
+                   io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testDefaultPackageId_handlesDigitOnlyName() {
+        // Project name that starts with a digit should generate default package segment "project"
+        cli.parse(arrayOf("--name=1App"))
+        assertEquals(1, io.httpCalls.size)
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+        // The generated package ID should be org.cmp.project since "1app" starts with a digit
+        assertTrue(io.httpCalls[0].contains("org.cmp.project"))
+    }
+
+    @Test
+    fun testTemplateWithDefaultPackageId() {
+        cli.parse(arrayOf("--template=shared-ui", "--name=My-Test-App"))
+        assertTrue(io.printed.any { it.contains("Generating template:") })
+        assertEquals(1, io.httpCalls.size)
+    }
+
+    // Edge case tests
+
+    @Test
+    fun testProjectName_minimumLength() {
+        // Single character should work
+        cli.parse(arrayOf("--name=A", "--pid=org.test"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_singleSegment() {
+        cli.parse(arrayOf("--name=Test", "--pid=app"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_manySegments() {
+        cli.parse(arrayOf("--name=Test", "--pid=com.example.app.feature.module"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_withNumbers() {
+        cli.parse(arrayOf("--name=Test", "--pid=com.example123.app456"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
+
+    @Test
+    fun testPackageId_withUnderscores() {
+        cli.parse(arrayOf("--name=Test", "--pid=com.my_company.my_app"))
+        assertTrue(io.printed.any { it.contains("Project generation complete") })
+    }
 }

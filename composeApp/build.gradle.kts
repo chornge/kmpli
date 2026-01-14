@@ -66,6 +66,7 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.curl)
                 implementation(libs.squareup.okio)
+                implementation(libs.mordant)
             }
         }
 
