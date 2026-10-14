@@ -9,6 +9,19 @@ A command-line interface (CLI) designed to streamline the creation of new Kotlin
 projects. It offers a flexible way to generate customized project configurations and directory structures, including
 configuring with Amper, and test setups.
 
+### Supported Platforms
+
+| OS | Architecture | Status |
+| --- | --- | --- |
+| macOS | arm64 (Apple Silicon) | Supported |
+| macOS | x86_64 (Intel) | Supported |
+| Linux | x86_64 | Supported |
+| Linux | aarch64 / arm64 | Not yet, see [#19](https://github.com/chornge/kmpli/issues/19) |
+| Windows | x86_64 | Supported |
+
+Each release publishes a binary for every supported row. On Linux aarch64 the launcher stops with an
+explanation instead of failing to download.
+
 ### Installation
 
 **Prerequisites (Required)**
@@ -77,11 +90,33 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 The installer sets up a launcher that automatically downloads the appropriate binary for your platform on first run. No
 build required!
 
+### Uninstalling
+
+From a clone of this repository:
+
+```bash
+make uninstall
+```
+
+That removes kmpli however it was installed: the Homebrew formula or Scoop package if either is
+present, the binary in the install directory, and the launcher and cached binaries under `~/.kmpli`.
+On Windows it also removes the `%USERPROFILE%\.kmpli` entry that `install.ps1` added to your PATH.
+
+Or remove it by hand, using whichever applies:
+
+```bash
+brew uninstall kmpli          # Homebrew
+scoop uninstall kmpli         # Scoop
+rm -f /usr/local/bin/kmpli    # curl or git installer (macOS/Linux)
+rm -rf ~/.kmpli               # launcher and cached binaries
+```
+
 ### Building from Source (Optional)
 
 If you prefer to build from source or need to contribute:
 
-**Requirements:** JDK-17+, Gradle, Git, and platform-specific dependencies:
+**Requirements:** JDK-17+, Git, and the platform-specific dependencies below. Gradle itself comes
+from the wrapper checked into this repository, so there is no need to install it.
 
 - **macOS**: `brew install openssl curl`
 - **Linux**: `sudo apt-get install -y curl libcurl4-openssl-dev libssl-dev`
@@ -94,7 +129,21 @@ chmod +x gradlew
 ./gradlew build
 ```
 
-Then run the installer as shown above. The launcher will use your locally built binary instead of downloading.
+A `Makefile` wraps the common tasks for whichever platform you are on. Run `make help` to list them:
+
+| Target | What it does |
+| --- | --- |
+| `make build` | Assemble and check the host target, running its tests too |
+| `make test` | Run only the host target's unit tests |
+| `make release` | Link the optimized release binary |
+| `make install` | Build the release binary and copy it to the install directory |
+| `make uninstall` | Remove kmpli installed by any supported method |
+| `make clean` | Delete Gradle build outputs |
+| `make sanity` | Run clean, then test, then build |
+
+Then run the installer as shown above. The launcher prefers a locally built binary over downloading
+one, but it looks for that binary at a path relative to the current directory, so you only get the
+local build when you run `kmpli` from the root of this repository.
 
 ### Usage
 
@@ -126,19 +175,39 @@ kmpli --name="CMPProject" --pid="org.cmp.project"
 #### Usage Options
 
 ```
-  --name TEXT       Project name (optional)
-  --pid TEXT        Package ID (optional)
+  --name TEXT       Project name. Optional, defaults to "CMPProject".
+                    1 to 50 characters of Latin letters, digits, spaces,
+                    underscores and hyphens, starting with a letter or digit.
+  --pid TEXT        Package ID. Optional, defaults to "org.cmp.<name>" using the
+                    name lowercased with everything but letters and digits
+                    removed (or "project" if that result is empty or begins
+                    with a digit).
+                    Must be dot-separated lowercase segments of letters, digits
+                    and '_', each starting with a letter, at most 100 chars.
   --template TEXT   Multiplatform template
                     shared-ui -> Shared UI App (Compose)
                     native-ui -> Native UI App (Compose + SwiftUI)
                     library -> Bare-bones Multiplatform Library
                     shared-ui-amper -> Shared UI App (configured with Amper)
                     native-ui-amper -> Native UI App (configured with Amper)
-  --platforms TEXT  Target platform(s)
-                    android,ios(swiftui),web(react),desktop,server
+  --platforms TEXT  Target platform(s). Optional, defaults to
+                    "android(compose),ios(compose)". Comma-separated, each entry
+                    written as NAME or NAME(UI):
+                      android   compose (default)
+                      ios       compose (default), swiftui
+                      desktop   compose (default)
+                      web       compose (default), react
+                      server    always uses the ktor engine; any UI is ignored
   --include-tests   Include sample tests (optional)
   --help, -h        Show this help message
+  --version, -v     Show the installed kmpli version
 ```
+
+Values may be given as either `--flag=value` or `--flag value`. Flag names must match exactly, so a
+typo such as `--nameXYZ=Foo` is reported rather than silently accepted.
+
+**Exit codes:** `0` on success, `1` on invalid input or a failed generation. Worth relying on when
+calling kmpli from a script or CI job.
 
 To generate all the platforms (IOS with SwiftUI and Web with React/TS), with a name, project ID and with tests, run:
 
@@ -207,20 +276,24 @@ This means your system is missing SSL certificates or curl cannot find them.
    ls -la /usr/local/etc/openssl/cert.pem     # Intel
    ```
 
-3. **Manual CA bundle path** (if auto-detection fails):
+3. **Point curl at the CA bundle explicitly.** kmpli does not search for a bundle itself; it leaves
+   certificate verification to curl, so tell curl which file to use:
 
    ```bash
-   # Set environment variable before running kmpli
    export CURL_CA_BUNDLE=/path/to/cert.pem
    kmpli --name="CMPProject" --pid="org.cmp.project"
    ```
 
-4. **macOS specific**: If you recently installed/updated Homebrew, you may need to link openssl:
+4. **macOS specific**: the released binary links against Homebrew's curl rather than the system
+   one, so make sure that is installed and current:
+
    ```bash
-   brew link openssl
-   # or for specific version
-   brew link openssl@3
+   brew install curl ca-certificates
+   brew upgrade curl ca-certificates
    ```
+
+   Do not try to `brew link openssl`. The formula is named `openssl@3`, and it is keg-only, so
+   Homebrew leaves it unlinked deliberately and the link will fail.
 
 #### Other Issues
 
