@@ -13,8 +13,39 @@ permissions:
   contents: write
 
 jobs:
+  # The released version comes from the pushed tag, but gradle/libs.versions.toml
+  # declares it too and it is compiled into the binary as KMPLI_VERSION. Fail here
+  # rather than after burning four build runners if the two disagree. The condition
+  # sits on the step, not the job, so a workflow_dispatch run (which has no tag)
+  # does not cascade-skip build-binaries, which needs this job.
+  verify-version:
+    name: Verify version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Tag must match appVersion
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          DECLARED=$(sed -nE 's/^appVersion[[:space:]]*=[[:space:]]*"(.*)"/\1/p' gradle/libs.versions.toml)
+
+          if [ -z "$DECLARED" ]; then
+            echo "::error::appVersion not found in gradle/libs.versions.toml"
+            exit 1
+          fi
+
+          if [ "$GITHUB_REF_NAME" != "$DECLARED" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match appVersion $DECLARED in gradle/libs.versions.toml -- bump it and retag"
+            exit 1
+          fi
+
+          echo "tag $GITHUB_REF_NAME matches appVersion $DECLARED"
+
   build-binaries:
     name: Build ${{ matrix.target }}
+    needs: verify-version
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -156,7 +187,14 @@ jobs:
           # Get all commits from the previous tag to this tag
           PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF}^ 2>/dev/null || echo "")
           if [ -n "$PREV_TAG" ]; then
-            RELEASE_NOTES=$(git log ${PREV_TAG}..${GITHUB_REF} --pretty=format:"- %s")
+            # --invert-grep drops "Update package manifests for vX.Y.Z". That commit is
+            # created by the PREVIOUS release's own workflow, so it always lands after
+            # that release's tag and would otherwise be reported under this one.
+            RELEASE_NOTES=$(git log ${PREV_TAG}..${GITHUB_REF} --pretty=format:"- %s" \
+              --invert-grep --grep="^Update package manifests")
+            if [ -z "$RELEASE_NOTES" ]; then
+              RELEASE_NOTES="- No user-facing changes; see CHANGELOG.md"
+            fi
           else
             RELEASE_NOTES="Initial release"
           fi
@@ -183,7 +221,7 @@ jobs:
 
           **Homebrew (macOS/Linux):**
           \`\`\`bash
-          brew tap chornge/kmpli && brew install kmpli
+          brew tap chornge/kmpli https://github.com/chornge/kmpli && brew install kmpli
           \`\`\`
 
           **Scoop (Windows):**
