@@ -20,7 +20,7 @@ jobs:
   # does not cascade-skip build-binaries, which needs this job.
   verify-version:
     name: Verify version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -61,7 +61,7 @@ jobs:
             binary_name: kmpli-macos-arm64
             binary_path: composeApp/build/bin/macosArm64/releaseExecutable/kmpli.kexe
 
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             target: LinuxX64
             binary_name: kmpli-linux-x64
             binary_path: composeApp/build/bin/linuxX64/releaseExecutable/kmpli.kexe
@@ -134,7 +134,7 @@ jobs:
   create-release:
     name: Create Release
     needs: build-binaries
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
