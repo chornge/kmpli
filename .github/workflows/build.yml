@@ -208,11 +208,19 @@ jobs:
 
           test -n "$opts" || { echo "::error::pkg-config returned no libs for arm64 libcurl"; exit 1; }
 
-          # Static libgcc for the outline-atomics helpers. Its directory is GCC-version
-          # specific, so locate it rather than hardcoding the version.
-          gccdir=$(dirname "$(find /usr/lib/gcc/aarch64-linux-gnu -name libgcc.a | head -1)")
-          test -d "$gccdir" || { echo "::error::arm64 libgcc.a not found"; exit 1; }
-          opts="$opts -L$gccdir -lgcc"
+          # Static libgcc for the outline-atomics helpers, passed by ABSOLUTE PATH rather
+          # than -lgcc. Kotlin ships its own libgcc.a (GCC 8.3.0, which predates outline
+          # atomics) and its directory sits ahead of ours on the search path, so -lgcc
+          # silently resolves to that one and the symbol stays undefined. Naming the
+          # archive directly bypasses -l resolution.
+          libgcc_a=$(find /usr/lib/gcc/aarch64-linux-gnu -name libgcc.a | head -1)
+          test -f "$libgcc_a" || { echo "::error::arm64 libgcc.a not found"; exit 1; }
+
+          # Guard against picking an archive that lacks the helpers we need.
+          strings "$libgcc_a" | grep -q '__aarch64_swp4_acq' \
+            || { echo "::error::$libgcc_a has no outline-atomics helpers"; exit 1; }
+
+          opts="$opts $libgcc_a"
 
           echo "final arm64 linker opts: $opts"
           echo "KMPLI_LINUX_ARM64_LINKER_OPTS=$opts" >> "$GITHUB_ENV"
