@@ -71,20 +71,25 @@ jobs:
         include:
           - os: macos-15-intel
             target: MacosX64
+            binary_path: composeApp/build/bin/macosX64/releaseExecutable/kmpli.kexe
 
           - os: macos-latest
             target: MacosArm64
+            binary_path: composeApp/build/bin/macosArm64/releaseExecutable/kmpli.kexe
 
           - os: ubuntu-24.04
             target: LinuxX64
+            binary_path: composeApp/build/bin/linuxX64/releaseExecutable/kmpli.kexe
 
           # Cross-compiled from the x86_64 runner: Kotlin/Native publishes no
           # linux-aarch64 host compiler, so aarch64 cannot be built natively.
           - os: ubuntu-24.04
             target: LinuxArm64
+            binary_path: composeApp/build/bin/linuxArm64/releaseExecutable/kmpli.kexe
 
           - os: windows-latest
             target: MingwX64
+            binary_path: composeApp/build/bin/mingwX64/releaseExecutable/kmpli.exe
 
     steps:
       - name: Checkout
@@ -238,6 +243,27 @@ jobs:
           chmod +x gradlew
           ./gradlew compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
 
+      # The unit tests mock all platform IO, so this is the only coverage anywhere for the
+      # real network, TLS, unzip/tar shell-out and placeholder-rewriting path. LinuxArm64 is
+      # excluded because its binary cannot execute on the x86_64 builder; it gets its own job.
+      - name: Smoke Test
+        if: matrix.target != 'LinuxArm64'
+        shell: bash
+        run: |
+          set -eux
+          bin="$PWD/${{ matrix.binary_path }}"
+          chmod +x "$bin" 2>/dev/null || true
+
+          "$bin" --version
+          "$bin" --help | head -3
+
+          # Exercises libcurl and TLS, the unzip/tar shell-out in extractZip, and the
+          # placeholder rewriting. Run in a scratch directory: generation writes to cwd.
+          rm -rf smoke && mkdir smoke && cd smoke
+          "$bin" --name=SmokeTest --pid=org.smoke.test --template=library
+          test -d SmokeTest || { echo "::error::generation produced no SmokeTest directory"; exit 1; }
+          ls -la
+
       # Linking can succeed while producing the wrong architecture, so check explicitly.
       - name: Verify aarch64 Binary
         if: matrix.target == 'LinuxArm64'
@@ -260,7 +286,8 @@ jobs:
   # GitHub's arm64 Linux runners cannot BUILD kmpli (no linux-aarch64 Kotlin/Native host
   # compiler exists) but they can RUN an aarch64 binary. This is the only way to prove the
   # cross-compiled artifact actually works, rather than merely that it linked. It is kept
-  # out of build-gate for now so a runner-availability problem does not block the branch.
+  # It gates the branch: the cross-link relies on --allow-shlib-undefined, so a green build
+  # alone proves nothing. Only running the binary on real hardware does.
   smoke-test-linux-arm64:
     name: Smoke Test (LinuxArm64)
     needs: build
@@ -283,6 +310,7 @@ jobs:
 
           # Exercises libcurl and TLS, which is the part cross-linking puts at risk.
           ./kmpli.kexe --name="SmokeTest" --pid=org.smoke.test --template=library
+          test -d SmokeTest || { echo "::error::generation produced no SmokeTest directory"; exit 1; }
           echo "--- generated ---"
           ls -la
 
@@ -296,7 +324,7 @@ jobs:
   # fails; without it the job would be skipped and report no useful conclusion.
   build-gate:
     name: build
-    needs: [test, build]
+    needs: [test, build, smoke-test-linux-arm64]
     if: always()
     runs-on: ubuntu-24.04
 
@@ -305,9 +333,12 @@ jobs:
         run: |
           echo "test:  ${{ needs.test.result }}"
           echo "build: ${{ needs.build.result }}"
+          echo "smoke: ${{ needs.smoke-test-linux-arm64.result }}"
 
-          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.build.result }}" != "success" ]; then
-            echo "::error::build-gate failed: test=${{ needs.test.result }} build=${{ needs.build.result }}"
+          if [ "${{ needs.test.result }}" != "success" ] \
+            || [ "${{ needs.build.result }}" != "success" ] \
+            || [ "${{ needs.smoke-test-linux-arm64.result }}" != "success" ]; then
+            echo "::error::build-gate failed: test=${{ needs.test.result }} build=${{ needs.build.result }} smoke=${{ needs.smoke-test-linux-arm64.result }}"
             exit 1
           fi
 

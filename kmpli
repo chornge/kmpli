@@ -34,24 +34,21 @@ case "$OS" in
     ;;
   linux*)
     case "$ARCH" in
+      aarch64|arm64)
+        # Cross-compiled from an x86_64 Linux host; Kotlin/Native ships no
+        # linux-aarch64 host compiler, so it cannot be built natively.
+        PLATFORM_NAME="linuxArm64"
+        BINARY_NAME="kmpli-linux-arm64"
+        DISPLAY_NAME="Linux ARM64"
+        ;;
       x86_64)
         PLATFORM_NAME="linuxX64"
         BINARY_NAME="kmpli-linux-x64"
         DISPLAY_NAME="Linux x64"
         ;;
-      aarch64|arm64)
-        # No binary is published for Linux ARM64 yet. Kotlin/Native ships no
-        # linux-aarch64 host compiler, so it cannot be built natively; shipping
-        # one requires cross-compiling from an x86_64 Linux host. Fail here with
-        # an explanation rather than 404ing on a release asset that is absent.
-        echo "❌ Linux ARM64 ($ARCH) is not supported yet"
-        echo "   No kmpli binary is published for this architecture."
-        echo "   Progress: https://github.com/chornge/kmpli/issues/19"
-        exit 1
-        ;;
       *)
         echo "❌ Unsupported Linux architecture: $ARCH"
-        echo "   Supported: x86_64 (x64)"
+        echo "   Supported: aarch64 (ARM64), x86_64 (x64)"
         exit 1
         ;;
     esac
@@ -74,7 +71,7 @@ case "$OS" in
     echo "❌ Unsupported operating system: $OS (architecture: $ARCH)"
     echo "   Supported platforms:"
     echo "   - macOS (x86_64, arm64)"
-    echo "   - Linux (x86_64)"
+    echo "   - Linux (x86_64, aarch64)"
     echo "   - Windows (x86_64)"
     exit 1
     ;;
