@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `--version` / `-v` flag reporting the version declared by `appVersion` in `gradle/libs.versions.toml`
+- Release job that refuses to publish a tag disagreeing with `appVersion`
+- Unit tests for the TUI wizard's selection labels and the wizard-to-CLI argument contract (new `nativeTest` source set)
+
+### Fixed
+
+- Invalid input now prints the error and exits `1` instead of aborting with a Kotlin stack trace and `SIGABRT`
+- Spurious `Unknown argument` when a value was passed as `--name Foo` rather than `--name=Foo`
+- `--name` help text omitted spaces, which project names may contain
+- `--pid` help text omitted the 100-character limit
+- `--name` error message listed `-` as allowed without stating that the first character must be a letter or digit
+- `--pid` error message described the rule as a valid Java package name, when lowercase segments are required
+- `--platforms` error message rendered with no value when an entry was empty (e.g. `android,,ios`)
+- Homebrew command in generated release notes omitted the tap URL, so `brew tap chornge/kmpli` resolved to a nonexistent repository
+- Generated release notes included the previous release's `Update package manifests` commit
+- Launcher on Linux ARM64 tried to download a binary that is never published, and now reports the architecture as unsupported (#19)
+- Makefile `install` on Windows used cmd.exe syntax while every other target requires a POSIX shell
+- Makefile `uninstall` left the launcher, batch wrapper and PATH entry created by `install.ps1` in place
+- Makefile `sanity` prerequisites could run out of order under `make -j`
+
+### Changed
+
+- Flag names must match exactly, so a typo such as `--nameXYZ=Foo` is reported rather than accepted as `--name`
+- `--platforms` entries must be fully formed, so `ios(swiftui` and `android!!!` are rejected rather than silently using the default UI
+- TUI template selection resolves ids by exact match against the template list instead of splitting the label on a separator
+- `make test` runs `./gradlew allTests`, matching the test job in CI
+- Makefile rewritten with a shared Unix branch, self-documenting `help`, and a guard for unsupported hosts
+- README documents supported platforms, uninstalling, the Makefile targets, exit codes and the flag constraints
+
 ## [1.3.0] - 2026-01-13
 
 ### Added
