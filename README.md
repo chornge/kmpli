@@ -16,11 +16,11 @@ configuring with Amper, and test setups.
 | macOS | arm64 (Apple Silicon) | Supported |
 | macOS | x86_64 (Intel) | Supported |
 | Linux | x86_64 | Supported |
-| Linux | aarch64 / arm64 | Not yet, see [#19](https://github.com/chornge/kmpli/issues/19) |
+| Linux | aarch64 / arm64 | Supported |
 | Windows | x86_64 | Supported |
 
-Each release publishes a binary for every supported row. On Linux aarch64 the launcher stops with an
-explanation instead of failing to download.
+Each release publishes a binary for every supported row. The Linux aarch64 binary is cross-compiled
+from an x86_64 host, because Kotlin/Native publishes no linux-aarch64 host compiler.
 
 ### Installation
 
