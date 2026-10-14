@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Linux ARM64 (aarch64) binaries, cross-compiled from the x86_64 Linux runner because
+  Kotlin/Native publishes no linux-aarch64 host compiler (#19)
+- Homebrew formula now selects between Linux ARM64 and x64 builds
+- CI smoke tests that run the built binary on every platform, covering `--version`, `--help`
+  and a live template generation. This is the first coverage of the real network, TLS,
+  unzip/tar and placeholder-rewriting path, which the unit tests mock out
+- The aarch64 smoke test runs on real ARM hardware, since that binary is cross-compiled and
+  cannot execute on its build host
+
+### Changed
+
+- Launcher resolves `aarch64`/`arm64` on Linux to `kmpli-linux-arm64` instead of reporting the
+  architecture as unsupported
+- Linux CI runners pinned to `ubuntu-24.04` rather than `ubuntu-latest`, ahead of the
+  `ubuntu-latest` migration to Ubuntu 26
+- Gradle and Kotlin/Native caches are keyed per build target, so the two Linux targets no
+  longer share one cache entry
+
 ## [1.4.0] - 2026-10-14
 
 ### Added
