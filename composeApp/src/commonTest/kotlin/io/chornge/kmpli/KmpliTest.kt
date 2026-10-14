@@ -69,7 +69,7 @@ class KmpliTest {
     // must describe the lowercase rule instead of appealing to Java's.
     @Test
     fun testPackageId_errorDescribesTheLowercaseRule() {
-        val message = assertFailsWith<IllegalStateException> {
+        val message = assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=Foo", "--pid=org.Example.app"))
         }.message!!
         assertTrue(message.contains("lowercase"), message)
@@ -80,7 +80,7 @@ class KmpliTest {
     // listing '-' among the allowed characters and leaving the user guessing.
     @Test
     fun testProjectName_errorExplainsTheLeadingCharacterRule() {
-        val message = assertFailsWith<IllegalStateException> {
+        val message = assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=-foo", "--pid=org.test"))
         }.message!!
         assertTrue(message.contains("starting with a letter or digit"), message)
@@ -99,6 +99,88 @@ class KmpliTest {
         cli.parse(arrayOf("--help"))
         val nameLine = io.printed.first { it.trimStart().startsWith("--name") }
         assertTrue(nameLine.contains("spaces"), nameLine)
+    }
+
+    // --- project resolution -----------------------------------------------------------
+    // Defaulting and validation used to be duplicated verbatim in the template and platform
+    // branches, which is how "Inconsistent default package ID generation between template and
+    // platform modes" (fixed in 1.3.0) was possible. Both paths now share one function.
+
+    private fun resolve(name: String? = null, pid: String? = null) =
+        cli.resolveProject(Kmpli.CliOptions(name = name, pid = pid))
+
+    @Test
+    fun testResolveProject_appliesTheDefaultName() {
+        assertEquals("CMPProject", resolve().name)
+        assertEquals("org.cmp.cmpproject", resolve().packageId)
+    }
+
+    @Test
+    fun testResolveProject_derivesPackageIdByStrippingNonAlphanumerics() {
+        assertEquals("org.cmp.myapptest", resolve(name = "My-App_Test").packageId)
+        assertEquals("org.cmp.myapptest", resolve(name = "My App Test").packageId)
+    }
+
+    @Test
+    fun testResolveProject_fallsBackWhenTheNameStartsWithADigit() {
+        // Package segments must start with a letter, so "1app" cannot be used.
+        assertEquals("org.cmp.project", resolve(name = "1App").packageId)
+    }
+
+    @Test
+    fun testResolveProject_fallsBackWhenTheNameSanitizesToNothing() {
+        // Reachable only for a name that then fails validation, since a valid name must start
+        // with a letter or digit and therefore always leaves at least one character.
+        assertFailsWith<InvalidInputException> { resolve(name = "---") }
+    }
+
+    @Test
+    fun testResolveProject_prefersAnExplicitPackageId() {
+        assertEquals("org.explicit.id", resolve(name = "Foo", pid = "org.explicit.id").packageId)
+    }
+
+    @Test
+    fun testResolveProject_validatesAnExplicitPackageId() {
+        assertFailsWith<InvalidInputException> { resolve(name = "Foo", pid = "org.Bad.Id") }
+    }
+
+    /** The regression the shared function exists to prevent. */
+    @Test
+    fun testDefaultPackageId_isIdenticalInTemplateAndPlatformModes() {
+        val templateIo = MockPlatformIO()
+        Kmpli(templateIo).parse(arrayOf("--name=My-App_Test", "--template=library"))
+
+        val platformIo = MockPlatformIO()
+        Kmpli(platformIo).parse(arrayOf("--name=My-App_Test"))
+
+        assertEquals(
+            templateIo.replacedPlaceholders.single().third,
+            platformIo.replacedPlaceholders.single().third,
+            "template and platform modes must derive the same default package ID"
+        )
+        assertEquals("org.cmp.myapptest", templateIo.replacedPlaceholders.single().third)
+    }
+
+    // --- input validation contract ---------------------------------------------------
+    // Every user-input failure must surface as InvalidInputException, never as a violated
+    // internal invariant. If a new validation path is added with `error(...)` instead of
+    // `invalidInput(...)`, this fails.
+    @Test
+    fun testEveryValidationFailureUsesTheUserInputType() {
+        val badInputs = listOf(
+            "invalid project name" to arrayOf("--name=!!!", "--pid=org.test"),
+            "uppercase package segment" to arrayOf("--name=Foo", "--pid=org.Example.app"),
+            "package id too long" to arrayOf("--name=Foo", "--pid=org." + "a".repeat(120)),
+            "unknown template" to arrayOf("--name=Foo", "--pid=org.test", "--template=nope"),
+            "unknown platform" to arrayOf("--name=Foo", "--pid=org.test", "--platforms=bogus"),
+            "empty platform entry" to arrayOf("--name=Foo", "--pid=org.test", "--platforms=a,,b"),
+            "malformed platform entry" to arrayOf("--name=Foo", "--pid=org.test", "--platforms=ios(x"),
+            "wrong ui for platform" to arrayOf("--name=Foo", "--pid=org.test", "--platforms=android(swiftui)")
+        )
+
+        for ((label, args) in badInputs) {
+            assertFailsWith<InvalidInputException>(label) { cli.parse(args) }
+        }
     }
 
     // --- version contract -----------------------------------------------------------
@@ -191,7 +273,7 @@ class KmpliTest {
 
     @Test
     fun testParsePlatforms_rejectsAnEmptyEntryWithAReadableMessage() {
-        val message = assertFailsWith<IllegalStateException> {
+        val message = assertFailsWith<InvalidInputException> {
             cli.parsePlatforms("android,,ios")
         }.message!!
         assertTrue(message.contains("Empty platform entry"), message)
@@ -203,7 +285,7 @@ class KmpliTest {
     // becoming a bare platform name with the default UI.
     @Test
     fun testParsePlatforms_rejectsAnUnbalancedParenthesis() {
-        val message = assertFailsWith<IllegalStateException> {
+        val message = assertFailsWith<InvalidInputException> {
             cli.parsePlatforms("ios(swiftui")
         }.message!!
         assertTrue(message.contains("'ios(swiftui'"), message)
@@ -211,13 +293,13 @@ class KmpliTest {
 
     @Test
     fun testParsePlatforms_rejectsTrailingJunkAfterAValidName() {
-        assertFailsWith<IllegalStateException> { cli.parsePlatforms("android!!!") }
-        assertFailsWith<IllegalStateException> { cli.parsePlatforms("ios(swiftui))") }
+        assertFailsWith<InvalidInputException> { cli.parsePlatforms("android!!!") }
+        assertFailsWith<InvalidInputException> { cli.parsePlatforms("ios(swiftui))") }
     }
 
     @Test
     fun testParsePlatforms_rejectsEmptyParentheses() {
-        assertFailsWith<IllegalStateException> { cli.parsePlatforms("ios()") }
+        assertFailsWith<InvalidInputException> { cli.parsePlatforms("ios()") }
     }
 
     @Test
@@ -228,7 +310,7 @@ class KmpliTest {
 
     @Test
     fun testParsePlatforms_rejectsAMalformedEntryQuotingTheOffendingText() {
-        val message = assertFailsWith<IllegalStateException> {
+        val message = assertFailsWith<InvalidInputException> {
             cli.parsePlatforms("android,!!!")
         }.message!!
         assertTrue(message.contains("'!!!'"), message)
@@ -341,7 +423,7 @@ class KmpliTest {
 
     @Test
     fun testProjectName_invalid_specialChars() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=My@Project!", "--pid=org.test"))
         }
     }
@@ -366,42 +448,42 @@ class KmpliTest {
 
     @Test
     fun testPackageId_invalid_hyphen() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=Test", "--pid=org.example-app"))
         }
     }
 
     @Test
     fun testPackageId_invalid_uppercase() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=Test", "--pid=Org.Example"))
         }
     }
 
     @Test
     fun testPackageId_invalid_startsWithDigit() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=Test", "--pid=org.1example"))
         }
     }
 
     @Test
     fun testPackageId_invalid_emptySegment() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=Test", "--pid=org..example"))
         }
     }
 
     @Test
     fun testPlatform_invalid_name() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parsePlatforms("invalid_platform")
         }
     }
 
     @Test
     fun testPlatform_invalid_uiForPlatform() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parsePlatforms("android(swiftui)")  // swiftui only valid for ios
         }
     }
@@ -420,7 +502,7 @@ class KmpliTest {
     fun testProjectName_maxLength_invalid() {
         // 51 chars exceeds max
         val name51 = "a".repeat(51)
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=$name51", "--pid=org.test"))
         }
     }
@@ -438,7 +520,7 @@ class KmpliTest {
     fun testPackageId_maxLength_invalid() {
         // 101 chars exceeds max (100 is the limit)
         val longPid = "a." + "a".repeat(99)  // 2 + 99 = 101 chars total
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidInputException> {
             cli.parse(arrayOf("--name=Test", "--pid=$longPid"))
         }
     }

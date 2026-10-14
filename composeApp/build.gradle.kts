@@ -4,6 +4,36 @@ val host = org.jetbrains.kotlin.konan.target.HostManager.host
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.detekt)
+}
+
+// Static analysis. Source sets are listed explicitly because the Kotlin Multiplatform plugin
+// does not expose them to detekt the way the JVM plugin does, and this project has no JVM target.
+detekt {
+    buildUponDefaultConfig = true
+    ignoreFailures = false
+    config.setFrom(rootProject.file("config/detekt.yml"))
+    baseline = rootProject.file("config/detekt-baseline.xml")
+    source.setFrom(
+        "src/commonMain/kotlin",
+        "src/nativeMain/kotlin",
+        "src/commonTest/kotlin",
+        "src/nativeTest/kotlin"
+    )
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "17"
+    reports {
+        html.required.set(true)
+        xml.required.set(false)
+        sarif.required.set(false)
+        md.required.set(false)
+    }
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+    jvmTarget = "17"
 }
 
 // `appVersion` in gradle/libs.versions.toml is the single declared version of the CLI.
@@ -51,10 +81,46 @@ kotlin {
             }
         }
 
-        KonanTarget.LINUX_X64 -> linuxX64("linuxX64") {
-            binaries.executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
+        // linux_arm64 has no Kotlin/Native host compiler of its own, so the aarch64 binary is
+        // cross-compiled from the linux_x64 host. Kotlin downloads the aarch64 gcc toolchain and
+        // sysroot automatically, but that sysroot carries no libcurl, so the CI job installs the
+        // arm64 libcurl packages and the linker is pointed at them below.
+        KonanTarget.LINUX_X64 -> {
+            linuxX64("linuxX64") {
+                binaries.executable {
+                    entryPoint = "io.chornge.kmpli.main"
+                    baseName = "kmpli"
+                }
+            }
+
+            linuxArm64("linuxArm64") {
+                binaries.executable {
+                    entryPoint = "io.chornge.kmpli.main"
+                    baseName = "kmpli"
+
+                    // Where dpkg multiarch places arm64 libraries. Harmless when absent.
+                    linkerOpts("-L/usr/lib/aarch64-linux-gnu")
+
+                    // Ubuntu's arm64 shared libraries are built against glibc 2.39 and reference
+                    // versioned symbols (pthread_detach@GLIBC_2.34 and friends) that Kotlin/Native's
+                    // glibc 2.25 sysroot does not contain. ld.lld verifies a shared library's own
+                    // undefined symbols by default; the real glibc on the user's machine resolves
+                    // them at runtime, so that check has to be relaxed for this cross-link.
+                    linkerOpts("--allow-shlib-undefined")
+
+                    // libcurl's full static closure, from `pkg-config --libs --static libcurl`
+                    // against the arm64 .pc file. Needed because ktor force-includes a static
+                    // libcurl.a whose members call into libssh, GSSAPI and OpenSSL. Passed in
+                    // rather than hardcoded so it cannot drift from the installed package.
+                    val extra = providers
+                        .environmentVariable("KMPLI_LINUX_ARM64_LINKER_OPTS")
+                        .orNull
+                        .orEmpty()
+                        .split(" ")
+                        .filter { it.isNotBlank() }
+
+                    if (extra.isNotEmpty()) linkerOpts(extra)
+                }
             }
         }
 
@@ -120,6 +186,9 @@ kotlin {
             KonanTarget.LINUX_X64 -> {
                 sourceSets.getByName("linuxX64Main").dependsOn(nativeMain)
                 sourceSets.getByName("linuxX64Test").dependsOn(nativeTest)
+                // linuxArm64 gets main sources only. Its tests are deliberately not wired:
+                // the aarch64 test binary cannot execute on the x86_64 build host.
+                sourceSets.getByName("linuxArm64Main").dependsOn(nativeMain)
             }
 
             KonanTarget.LINUX_ARM64 -> {
@@ -136,6 +205,10 @@ kotlin {
         }
     }
 }
+
+// The aarch64 test binary cannot run on the x86_64 build host, so keep it out of `allTests`.
+// Without this, `./gradlew allTests` would try to execute it and fail.
+tasks.matching { it.name == "linuxArm64Test" }.configureEach { enabled = false }
 
 val nativeTargets = listOf(
     "MacosX64",

@@ -84,20 +84,30 @@ actual fun Platform(): Platform = object : Platform {
         FileSystem.SYSTEM.write(tmpZip.toPath()) { write(zipBytes) }
         printLine("Saved ZIP to $tmpZip")
 
-        // Use platform-appropriate extraction command
-        // Windows 10+ has built-in tar that supports zip files
-        // macOS/Linux use unzip
+        // Use platform-appropriate extraction command.
+        // On Windows, "tar" on PATH is usually Git for Windows' GNU tar, which cannot read
+        // zip archives. The Windows-bundled bsdtar can, so invoke it by absolute path rather
+        // than letting PATH decide, and fall back to PowerShell if it is not present.
+        // macOS/Linux use unzip.
         val isWindows = kotlin.native.Platform.osFamily == kotlin.native.OsFamily.WINDOWS
         val exitCode = if (isWindows) {
-            system("tar -xf \"$tmpZip\"")
+            // Unquoted on purpose: cmd.exe mangles a command line that begins with a
+            // quote, and %SystemRoot%\System32 never contains spaces.
+            val bsdTar = system("%SystemRoot%\\System32\\tar.exe -xf \"$tmpZip\"")
+            if (bsdTar == 0) {
+                bsdTar
+            } else {
+                system(
+                    "powershell -NoProfile -Command " +
+                        "\"Expand-Archive -LiteralPath '$tmpZip' -DestinationPath '.' -Force\""
+                )
+            }
         } else {
             system("unzip -o \"$tmpZip\" -d .")
         }
         if (exitCode != 0) {
-            val cmd = if (isWindows) "tar" else "unzip"
-            printLine("$cmd failed with code $exitCode")
             FileSystem.SYSTEM.delete(tmpZip.toPath())
-            return targetPath.toString()
+            error("Failed to extract $tmpZip (extractor exited with code $exitCode)")
         }
 
         FileSystem.SYSTEM.delete(tmpZip.toPath())
@@ -111,7 +121,7 @@ actual fun Platform(): Platform = object : Platform {
         }
 
         if (extractedFolder == null) {
-            return targetPath.toString()
+            error("Extraction produced no recognizable project folder for $projectName")
         }
 
         // Rename/move to intended project name
@@ -123,10 +133,9 @@ actual fun Platform(): Platform = object : Platform {
         // Sanity check
         val entries = FileSystem.SYSTEM.list(targetPath)
         if (entries.isEmpty()) {
-            printLine("Extraction produced empty folder: $targetPath")
-        } else {
-            printLine("Extraction complete: $targetPath (${entries.size} items)")
+            error("Extraction produced an empty folder: $targetPath")
         }
+        printLine("Extraction complete: $targetPath (${entries.size} items)")
 
         return targetPath.toString()
     }

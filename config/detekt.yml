@@ -1,0 +1,50 @@
+# Overrides layered on top of detekt's defaults (buildUponDefaultConfig = true in
+# composeApp/build.gradle.kts). Only deviations are listed here.
+#
+# Detekt's defaults exclude '**/test/**' and similar from production-only rules, but Kotlin
+# Multiplatform names its test source sets commonTest and nativeTest, so those patterns never
+# match and the rules fire on test code. The excludes below extend the defaults to cover them.
+# The intent is to keep the signal honest, not to silence it.
+
+empty-blocks:
+  EmptyFunctionBlock:
+    # Test stubs implement an interface with deliberately empty bodies.
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+
+complexity:
+  TooManyFunctions:
+    # A test class legitimately has one function per case.
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+    # Detekt's default of 11 penalises exactly the decomposition #26 asked for: splitting one
+    # 79-line parse() into named handlers raised Kmpli from 6 functions to 11. 15 gives room
+    # for that without excusing genuine sprawl. It deliberately does not clear TuiWizard at 19,
+    # which remains baselined because that class really is doing too much.
+    thresholdInClasses: 15
+  LongMethod:
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+  CyclomaticComplexMethod:
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+  NestedBlockDepth:
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+
+naming:
+  FunctionNaming:
+    # Underscores in test names are a deliberate convention here, as in
+    # testParseArgs_rejectsFlagWithExtraSuffix.
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+    # Leading uppercase permits expect/actual factory functions that mirror a type name,
+    # such as `fun Platform(): Platform` in Platform.kt.
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+
+style:
+  MagicNumber:
+    # Expected values in assertions are the point of the assertion.
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+  MaxLineLength:
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+  ReturnCount:
+    excludes: ['**/commonTest/**', '**/nativeTest/**']
+
+  WildcardImport:
+    # `import kotlin.test.*` is the idiomatic form in test sources.
+    excludes: ['**/commonTest/**', '**/nativeTest/**']

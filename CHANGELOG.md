@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Linux ARM64 (aarch64) binaries, cross-compiled from the x86_64 Linux runner because
+  Kotlin/Native publishes no linux-aarch64 host compiler (#19)
+- Homebrew formula now selects between Linux ARM64 and x64 builds
+- CI smoke tests that run the built binary on every platform, covering `--version`, `--help`
+  and a live template generation. This is the first coverage of the real network, TLS,
+  unzip/tar and placeholder-rewriting path, which the unit tests mock out
+- The aarch64 smoke test runs on real ARM hardware, since that binary is cross-compiled and
+  cannot execute on its build host
+- detekt static analysis, run by `make lint` and by CI. Existing findings are recorded in
+  `config/detekt-baseline.xml` so they do not block the build, while new ones fail it (#24)
+
+### Fixed
+
+- The release workflow could publish a corrupted release when triggered by `workflow_dispatch`
+  from a branch. The tag check was skipped rather than failed, so the job succeeded and the
+  release was named after the branch ref, which then propagated into the Homebrew formula and
+  Scoop manifest via the auto-merged manifest PR. It now fails closed on any non-tag ref
+- Template extraction on Windows failed whenever Git for Windows was installed, because `tar`
+  on PATH resolves to GNU tar, which cannot read zip archives. The Windows-bundled bsdtar is
+  now invoked by absolute path, with a PowerShell `Expand-Archive` fallback
+- A failed extraction reported `Project generation complete!` and exited `0`. Extraction
+  failures, an unrecognized project folder and an empty result now report an error and exit `1`
+
+### Changed
+
+- Launcher resolves `aarch64`/`arm64` on Linux to `kmpli-linux-arm64` instead of reporting the
+  architecture as unsupported
+- Linux CI runners pinned to `ubuntu-24.04` rather than `ubuntu-latest`, ahead of the
+  `ubuntu-latest` migration to Ubuntu 26
+- Gradle and Kotlin/Native caches are keyed per build target, so the two Linux targets no
+  longer share one cache entry
+- `make sanity` now runs lint before tests and build
+- `Kmpli.parse()` decomposed from 79 lines into `printHelp`, `resolveProject` and a handler per
+  generation mode. Name defaulting, package ID derivation and validation were previously
+  duplicated verbatim in the template and platform branches and now share one function (#26)
+- Invalid user input raises `InvalidInputException` rather than `IllegalStateException`, so a
+  user mistake can no longer be confused with a violated internal invariant. Input errors now
+  also suggest `kmpli --help`, which environment and IO failures deliberately do not (#28)
+
 ## [1.4.0] - 2026-10-14
 
 ### Added

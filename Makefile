@@ -78,7 +78,7 @@ BINARY_PATH_WIN := $(subst /,\,$(BINARY_PATH))
 # -----------------------------------------------------------------------------
 # Targets
 # -----------------------------------------------------------------------------
-.PHONY: help build test clean release sanity install uninstall platform-check
+.PHONY: help build test clean release lint sanity install uninstall platform-check
 .DEFAULT_GOAL := help
 
 help: ## Show this help message
@@ -113,13 +113,17 @@ test: platform-check ## Run the unit tests (./gradlew allTests, exactly as CI do
 clean: ## Delete Gradle build outputs
 	./gradlew clean
 
+lint: ## Run detekt static analysis (config/detekt.yml, baseline in config/detekt-baseline.xml)
+	./gradlew detekt
+
 release: platform-check ## Link the optimized release binary for the host target
 	./gradlew $(RELEASE_TASK)
 
-# Separate recipe lines rather than `sanity: clean test build`: prerequisites are
-# unordered, so `make -j sanity` could otherwise run clean alongside test or build.
-sanity: ## Run clean, then test, then build -- strictly in that order
+# Separate recipe lines rather than listing these as prerequisites: prerequisites are
+# unordered, so `make -j sanity` could otherwise run clean alongside the others.
+sanity: ## Run clean, lint, test, then build -- strictly in that order
 	@$(MAKE) clean
+	@$(MAKE) lint
 	@$(MAKE) test
 	@$(MAKE) build
 
