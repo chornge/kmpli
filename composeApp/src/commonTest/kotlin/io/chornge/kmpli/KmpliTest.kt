@@ -101,6 +101,66 @@ class KmpliTest {
         assertTrue(nameLine.contains("spaces"), nameLine)
     }
 
+    // --- project resolution -----------------------------------------------------------
+    // Defaulting and validation used to be duplicated verbatim in the template and platform
+    // branches, which is how "Inconsistent default package ID generation between template and
+    // platform modes" (fixed in 1.3.0) was possible. Both paths now share one function.
+
+    private fun resolve(name: String? = null, pid: String? = null) =
+        cli.resolveProject(Kmpli.CliOptions(name = name, pid = pid))
+
+    @Test
+    fun testResolveProject_appliesTheDefaultName() {
+        assertEquals("CMPProject", resolve().name)
+        assertEquals("org.cmp.cmpproject", resolve().packageId)
+    }
+
+    @Test
+    fun testResolveProject_derivesPackageIdByStrippingNonAlphanumerics() {
+        assertEquals("org.cmp.myapptest", resolve(name = "My-App_Test").packageId)
+        assertEquals("org.cmp.myapptest", resolve(name = "My App Test").packageId)
+    }
+
+    @Test
+    fun testResolveProject_fallsBackWhenTheNameStartsWithADigit() {
+        // Package segments must start with a letter, so "1app" cannot be used.
+        assertEquals("org.cmp.project", resolve(name = "1App").packageId)
+    }
+
+    @Test
+    fun testResolveProject_fallsBackWhenTheNameSanitizesToNothing() {
+        // Reachable only for a name that then fails validation, since a valid name must start
+        // with a letter or digit and therefore always leaves at least one character.
+        assertFailsWith<InvalidInputException> { resolve(name = "---") }
+    }
+
+    @Test
+    fun testResolveProject_prefersAnExplicitPackageId() {
+        assertEquals("org.explicit.id", resolve(name = "Foo", pid = "org.explicit.id").packageId)
+    }
+
+    @Test
+    fun testResolveProject_validatesAnExplicitPackageId() {
+        assertFailsWith<InvalidInputException> { resolve(name = "Foo", pid = "org.Bad.Id") }
+    }
+
+    /** The regression the shared function exists to prevent. */
+    @Test
+    fun testDefaultPackageId_isIdenticalInTemplateAndPlatformModes() {
+        val templateIo = MockPlatformIO()
+        Kmpli(templateIo).parse(arrayOf("--name=My-App_Test", "--template=library"))
+
+        val platformIo = MockPlatformIO()
+        Kmpli(platformIo).parse(arrayOf("--name=My-App_Test"))
+
+        assertEquals(
+            templateIo.replacedPlaceholders.single().third,
+            platformIo.replacedPlaceholders.single().third,
+            "template and platform modes must derive the same default package ID"
+        )
+        assertEquals("org.cmp.myapptest", templateIo.replacedPlaceholders.single().third)
+    }
+
     // --- input validation contract ---------------------------------------------------
     // Every user-input failure must surface as InvalidInputException, never as a violated
     // internal invariant. If a new validation path is added with `error(...)` instead of

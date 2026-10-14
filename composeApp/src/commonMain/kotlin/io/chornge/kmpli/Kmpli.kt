@@ -12,6 +12,8 @@ class Kmpli(private val io: Platform = Platform()) {
         private val PACKAGE_ID_REGEX = Regex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$")
         // Package ID length limit (reasonable max for Java packages)
         internal const val MAX_PACKAGE_ID_LENGTH = 100
+        private const val DEFAULT_PROJECT_NAME = "CMPProject"
+
         // Flags that take a value, either as --flag=value or --flag value
         private val VALUE_FLAGS = setOf("--name", "--pid", "--template", "--platforms")
         // Valid platforms
@@ -50,81 +52,91 @@ class Kmpli(private val io: Platform = Platform()) {
 
     fun parse(args: Array<String>) = runBlocking {
         val options = parseArgs(args)
+        val template = options.template
 
-        if (options.version) {
-            io.printLine("kmpli $KMPLI_VERSION")
-            return@runBlocking
+        when {
+            options.version -> io.printLine("kmpli $KMPLI_VERSION")
+            options.help == true -> printHelp()
+            template != null -> generateFromTemplate(template, options)
+            else -> generateFromPlatforms(options)
         }
+    }
 
-        if (options.help == true) {
-            io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")
-            io.printLine("")
-            io.printLine("Options:")
-            io.printLine("  --name           Project name: letters, digits, spaces, '_' and '-'")
-            io.printLine("                   (1-50 chars, must start with a letter or digit)")
-            io.printLine("  --pid            Package identifier, e.g. org.example.app (max 100 chars)")
-            io.printLine("  --platforms      Comma-separated list of targets")
-            io.printLine("  --template       Predefined project template")
-            io.printLine("  --include-tests  Include sample tests")
-            io.printLine("  --help, -h       Show this help message")
-            io.printLine("  --version, -v    Show the installed kmpli version")
-            io.printLine("")
-            io.printLine("Platforms: android, ios, desktop, web, server")
-            io.printLine("UI options: compose (default), swiftui (ios), react (web)")
-            io.printLine("Templates: shared-ui, native-ui, library, shared-ui-amper, native-ui-amper")
-            return@runBlocking
-        }
+    private fun printHelp() {
+        io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")
+        io.printLine("")
+        io.printLine("Options:")
+        io.printLine("  --name           Project name: letters, digits, spaces, '_' and '-'")
+        io.printLine("                   (1-50 chars, must start with a letter or digit)")
+        io.printLine("  --pid            Package identifier, e.g. org.example.app (max 100 chars)")
+        io.printLine("  --platforms      Comma-separated list of targets")
+        io.printLine("  --template       Predefined project template")
+        io.printLine("  --include-tests  Include sample tests")
+        io.printLine("  --help, -h       Show this help message")
+        io.printLine("  --version, -v    Show the installed kmpli version")
+        io.printLine("")
+        io.printLine("Platforms: android, ios, desktop, web, server")
+        io.printLine("UI options: compose (default), swiftui (ios), react (web)")
+        io.printLine("Templates: shared-ui, native-ui, library, shared-ui-amper, native-ui-amper")
+    }
 
-        // Handle template
-        options.template?.let { templateName ->
-            if (options.name == null) options.name = "CMPProject"
-            if (options.pid == null) {
-                val safeName = options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")
-                // Package segments must start with a letter, not a digit
-                val validSegment = if (safeName.isEmpty() || safeName[0].isDigit()) "project" else safeName
-                options.pid = "org.cmp.$validSegment"
-            }
+    /** A project name and package ID after defaults have been applied and both validated. */
+    internal data class ResolvedProject(val name: String, val packageId: String)
 
-            // Validate inputs
-            val validatedName = validateProjectName(options.name!!)
-            val validatedPid = validatePackageId(options.pid!!)
+    /**
+     * Apply defaults to the project name and package ID, then validate both.
+     *
+     * This was previously duplicated verbatim in the template and platform branches, which is
+     * how "Inconsistent default package ID generation between template and platform modes"
+     * (fixed in 1.3.0) was able to happen in the first place.
+     */
+    internal fun resolveProject(options: CliOptions): ResolvedProject {
+        val name = options.name ?: DEFAULT_PROJECT_NAME
+        val packageId = options.pid ?: defaultPackageId(name)
+        return ResolvedProject(validateProjectName(name), validatePackageId(packageId))
+    }
 
-            val selectedTemplate = Template.fromId(templateName)
-                ?: invalidInput("Invalid template name: $templateName\nAvailable: ${Template.availableTemplates()}")
+    /**
+     * Derive "org.cmp.<name>" from the project name, lowercased with everything but letters and
+     * digits removed. Package segments must start with a letter, so an empty or digit-leading
+     * result falls back to "project".
+     */
+    private fun defaultPackageId(name: String): String {
+        val safeName = name.lowercase().replace(Regex("[^a-z0-9]+"), "")
+        val segment = if (safeName.isEmpty() || safeName[0].isDigit()) "project" else safeName
+        return "org.cmp.$segment"
+    }
 
-            io.printLine("Generating template: ${selectedTemplate.id} -> ${selectedTemplate.description}")
+    private suspend fun generateFromTemplate(templateName: String, options: CliOptions) {
+        val project = resolveProject(options)
 
-            val zipBytes = io.httpGetBytes(selectedTemplate.url)
-            val extractedDir = io.extractZip(zipBytes, validatedName)
-            io.replacePlaceholders(extractedDir, validatedName, validatedPid, selectedTemplate.oldPackageId)
+        val selectedTemplate = Template.fromId(templateName)
+            ?: invalidInput("Invalid template name: $templateName\nAvailable: ${Template.availableTemplates()}")
 
-            io.printLine("Project generation complete!")
-            return@runBlocking
-        }
+        io.printLine("Generating template: ${selectedTemplate.id} -> ${selectedTemplate.description}")
 
-        // Handle platform-based generation
+        val zipBytes = io.httpGetBytes(selectedTemplate.url)
+        val extractedDir = io.extractZip(zipBytes, project.name)
+        io.replacePlaceholders(extractedDir, project.name, project.packageId, selectedTemplate.oldPackageId)
+
+        io.printLine("Project generation complete!")
+    }
+
+    private suspend fun generateFromPlatforms(options: CliOptions) {
+        // Parsed before resolveProject so that a bad --platforms value is still reported ahead
+        // of a bad --name, matching the behaviour this replaced.
         val parsedPlatforms = parsePlatforms(options.platforms)
-        if (options.name == null) options.name = "CMPProject"
-        if (options.pid == null) {
-            val safeName = options.name!!.lowercase().replace(Regex("[^a-z0-9]+"), "")
-            // Package segments must start with a letter, not a digit
-            val validSegment = if (safeName.isEmpty() || safeName[0].isDigit()) "project" else safeName
-            options.pid = "org.cmp.$validSegment"
-        }
+        val project = resolveProject(options)
 
-        // Validate inputs
-        val validatedName = validateProjectName(options.name!!)
-        val validatedPid = validatePackageId(options.pid!!)
-
-        val url = buildUrl(validatedName, validatedPid, parsedPlatforms, options.includeTests)
+        val url = buildUrl(project.name, project.packageId, parsedPlatforms, options.includeTests)
 
         io.printLine("Generating project for platform(s):")
-        parsedPlatforms.forEach { io.printLine("• ${it.name}${it.ui?.let { " ($it)" } ?: ""}") }
-        if (options.includeTests) io.printLine("• including tests")
+        parsedPlatforms.forEach { io.printLine("\u2022 ${it.name}${it.ui?.let { " ($it)" } ?: ""}") }
+        if (options.includeTests) io.printLine("\u2022 including tests")
 
         val zipBytes = io.httpGetBytes(url)
-        val extractedDir = io.extractZip(zipBytes, validatedName)
-        io.replacePlaceholders(extractedDir, validatedName, validatedPid, "org.example.project")
+        val extractedDir = io.extractZip(zipBytes, project.name)
+        io.replacePlaceholders(extractedDir, project.name, project.packageId, "org.example.project")
 
         io.printLine("Project generation complete!")
     }

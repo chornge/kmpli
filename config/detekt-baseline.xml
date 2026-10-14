@@ -2,12 +2,10 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:Kmpli.kt$Kmpli$fun parse(args: Array&lt;String&gt;)</ID>
     <ID>CyclomaticComplexMethod:Kmpli.kt$Kmpli$internal fun parseArgs(args: Array&lt;String&gt;): CliOptions</ID>
     <ID>CyclomaticComplexMethod:TuiWizard.kt$TuiWizard$fun run(): WizardResult?</ID>
     <ID>CyclomaticComplexMethod:TuiWizard.kt$TuiWizard$private fun promptSelectPlatforms(): NavResult&lt;List&lt;PlatformConfig&gt;&gt;</ID>
     <ID>CyclomaticComplexMethod:TuiWizard.kt$TuiWizard$private fun selectOneCircularWithCursor(options: List&lt;String&gt;, startIndex: Int = 0): Pair&lt;String?, Int&gt;</ID>
-    <ID>LongMethod:Kmpli.kt$Kmpli$fun parse(args: Array&lt;String&gt;)</ID>
     <ID>LongMethod:TuiWizard.kt$TuiWizard$fun run(): WizardResult?</ID>
     <ID>LoopWithTooManyJumpStatements:PlatformNative.kt$&lt;no name provided&gt;$for</ID>
     <ID>MagicNumber:Kmpli.kt$Kmpli$3</ID>
@@ -17,6 +15,7 @@
     <ID>MagicNumber:TuiWizard.kt$TuiWizard$3</ID>
     <ID>MagicNumber:TuiWizard.kt$TuiWizard$4</ID>
     <ID>MagicNumber:TuiWizard.kt$TuiWizard$5</ID>
+    <ID>MaxLineLength:Kmpli.kt$Kmpli$invalidInput("Invalid UI '$ui' for platform '$name'. Valid options: ${validUiForPlatform.joinToString(", ")}")</ID>
     <ID>MaxLineLength:Kmpli.kt$Kmpli$io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")</ID>
     <ID>MaxLineLength:Kmpli.kt$Kmpli$return "https://kmp.jetbrains.com/generateKmtProject?name=${io.urlEncode(name)}&amp;id=${io.urlEncode(id)}&amp;spec=$encodedSpec"</ID>
     <ID>MaxLineLength:Kmpli.kt$Kmpli.Companion$// Valid package ID: each segment starts with lowercase letter, contains lowercase letters, digits, or underscores</ID>
