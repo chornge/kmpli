@@ -26,9 +26,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Tag must match appVersion
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Must run from a tag, and the tag must match appVersion
         run: |
+          # Fails closed rather than skipping. A workflow_dispatch from a branch used to skip
+          # this step, succeed the job, and let create-release publish a release literally named
+          # "refs/heads/main", then auto-merge a manifest PR with that as the version. Dispatch
+          # from a tag ref is still fine and is the supported way to re-run a failed release.
+          case "$GITHUB_REF" in
+            refs/tags/*) ;;
+            *)
+              echo "::error::release.yml must run from a tag, not $GITHUB_REF"
+              exit 1
+              ;;
+          esac
+
           DECLARED=$(sed -nE 's/^appVersion[[:space:]]*=[[:space:]]*"(.*)"/\1/p' gradle/libs.versions.toml)
 
           if [ -z "$DECLARED" ]; then

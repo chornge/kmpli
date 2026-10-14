@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The release workflow could publish a corrupted release when triggered by `workflow_dispatch`
+  from a branch. The tag check was skipped rather than failed, so the job succeeded and the
+  release was named after the branch ref, which then propagated into the Homebrew formula and
+  Scoop manifest via the auto-merged manifest PR. It now fails closed on any non-tag ref
 - Template extraction on Windows failed whenever Git for Windows was installed, because `tar`
   on PATH resolves to GNU tar, which cannot read zip archives. The Windows-bundled bsdtar is
   now invoked by absolute path, with a PowerShell `Expand-Archive` fallback
