@@ -67,8 +67,26 @@ kotlin {
                 binaries.executable {
                     entryPoint = "io.chornge.kmpli.main"
                     baseName = "kmpli"
+
                     // Where dpkg multiarch places arm64 libraries. Harmless when absent.
                     linkerOpts("-L/usr/lib/aarch64-linux-gnu")
+
+                    // ktor bundles a *static* libcurl.a for this target rather than linking the
+                    // system shared library, so libcurl's entire dependency closure (libssh,
+                    // OpenSSL, nghttp2, RTMP and the rest) has to be named explicitly. None of it
+                    // is in the Kotlin/Native sysroot or in linkerKonanFlags.linux_arm64.
+                    //
+                    // The exact list is whatever Ubuntu built libcurl against, so CI derives it
+                    // with `pkg-config --libs --static libcurl` against the arm64 .pc file and
+                    // passes it here instead of it being hardcoded and drifting.
+                    val extra = providers
+                        .environmentVariable("KMPLI_LINUX_ARM64_LINKER_OPTS")
+                        .orNull
+                        .orEmpty()
+                        .split(" ")
+                        .filter { it.isNotBlank() }
+
+                    if (extra.isNotEmpty()) linkerOpts(extra)
                 }
             }
         }
