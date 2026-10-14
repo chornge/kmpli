@@ -96,23 +96,27 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
+      # Keyed by target, not just OS. LinuxX64 and LinuxArm64 both report runner.os=Linux
+      # but need different content: arm64 klibs and the aarch64 toolchain versus x64 ones.
+      # Sharing one key let whichever job saved first win, so the other could restore a
+      # cache missing its own dependencies.
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
           restore-keys: |
-            ${{ runner.os }}-gradle-
+            ${{ runner.os }}-${{ matrix.target }}-gradle-
 
       - name: Cache Kotlin/Native
         uses: actions/cache@v4
         with:
           path: ~/.konan
-          key: ${{ runner.os }}-konan-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-konan-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
-            ${{ runner.os }}-konan-
+            ${{ runner.os }}-${{ matrix.target }}-konan-
 
       - name: Mac Dependencies
         if: startsWith(matrix.os, 'macos')
