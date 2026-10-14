@@ -1,14 +1,27 @@
 package io.chornge.kmpli
 
 import kotlinx.coroutines.runBlocking
+import kotlin.system.exitProcess
 
 fun main(args: Array<String>): Unit = runBlocking {
-    if (args.isEmpty()) {
-        // No arguments: launch interactive TUI wizard
-        runInteractiveMode()
-    } else {
-        // Arguments provided: use existing CLI behavior
-        Kmpli().parse(args)
+    try {
+        if (args.isEmpty()) {
+            // No arguments: launch interactive TUI wizard
+            runInteractiveMode()
+        } else {
+            // Arguments provided: use existing CLI behavior
+            Kmpli().parse(args)
+        }
+    } catch (e: IllegalStateException) {
+        // error(...) in Kmpli signals invalid user input. Report the message and exit 1
+        // rather than letting it abort with a Kotlin/Native stack trace and SIGABRT.
+        println("Error: ${e.message}")
+        exitProcess(1)
+    } catch (e: Exception) {
+        // Unexpected failure. Still no stack trace at the user; name the type so a bug
+        // report says something useful.
+        println("Error: ${e::class.simpleName}: ${e.message}")
+        exitProcess(1)
     }
 }
 
@@ -23,7 +36,7 @@ private suspend fun runInteractiveMode() {
     Kmpli().parse(args)
 }
 
-private fun buildArgsFromWizardResult(result: TuiWizard.WizardResult): Array<String> {
+internal fun buildArgsFromWizardResult(result: TuiWizard.WizardResult): Array<String> {
     val argsList = mutableListOf<String>()
 
     argsList.add("--name=${result.projectName}")
