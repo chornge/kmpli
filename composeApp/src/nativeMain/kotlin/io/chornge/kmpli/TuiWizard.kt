@@ -46,7 +46,7 @@ class TuiWizard(
     }
 
     companion object {
-        private val TEMPLATES = listOf(
+        internal val TEMPLATES = listOf(
             TemplateOption("shared-ui", "Shared Compose UI across all platforms"),
             TemplateOption("native-ui", "Compose + SwiftUI for native iOS feel"),
             TemplateOption("library", "Minimal multiplatform library setup"),
@@ -63,7 +63,44 @@ class TuiWizard(
         )
 
         private const val BACK_OPTION = "← Back"
+
+        // Separates an option id from its description in selectable labels.
+        // Labels are resolved back to ids by exact match against TEMPLATES (see
+        // resolveTemplateId), so this value is presentation only and an id that
+        // happened to contain it could not truncate the result.
+        private const val LABEL_SEPARATOR = " - "
         private const val DONE_OPTION = "✓ Done"
+
+        internal val IOS_UI_OPTIONS = listOf(
+            "Compose${LABEL_SEPARATOR}shared UI across platforms",
+            "SwiftUI${LABEL_SEPARATOR}native iOS experience"
+        )
+
+        internal val WEB_UI_OPTIONS = listOf(
+            "Compose${LABEL_SEPARATOR}shared UI across platforms",
+            "React${LABEL_SEPARATOR}TypeScript/React"
+        )
+
+        /** The selectable label for a template, e.g. "library - Minimal multiplatform library setup". */
+        internal fun templateLabel(option: TemplateOption): String =
+            "${option.id}$LABEL_SEPARATOR${option.description}"
+
+        /**
+         * Resolve a selected label back to its template id by exact match against
+         * TEMPLATES, rather than splitting on the separator. Returns null when the
+         * label belongs to no known template, so an unrecognized selection can never
+         * be passed downstream as a malformed id.
+         */
+        internal fun resolveTemplateId(label: String): String? =
+            TEMPLATES.firstOrNull { templateLabel(it) == label }?.id
+
+        /** Map a UI framework label to its id, defaulting to compose. */
+        internal fun resolveUiFramework(choice: String?): String = when {
+            choice == null -> "compose"
+            choice.startsWith("SwiftUI") -> "swiftui"
+            choice.startsWith("React") -> "react"
+            else -> "compose"
+        }
     }
 
     data class TemplateOption(val id: String, val description: String)
@@ -214,14 +251,14 @@ class TuiWizard(
         terminal.println(bold("  Pick a template"))
         terminal.println()
 
-        val options = TEMPLATES.map { "${it.id} — ${it.description}" } + BACK_OPTION
+        val options = TEMPLATES.map { templateLabel(it) } + BACK_OPTION
 
         return when (val selected = selectOne(options)) {
             BACK_OPTION -> NavResult.Back
             null -> NavResult.Cancel
-            else -> {
-                val templateId = selected.substringBefore(" —")
-                NavResult.Next(templateId)
+            else -> when (val templateId = resolveTemplateId(selected)) {
+                null -> NavResult.Cancel
+                else -> NavResult.Next(templateId)
             }
         }
     }
@@ -289,14 +326,8 @@ class TuiWizard(
 
     private fun promptUiFramework(platformId: String): String? {
         val (name, options) = when (platformId) {
-            "ios" -> "iOS" to listOf(
-                "Compose — shared UI across platforms",
-                "SwiftUI — native iOS experience"
-            )
-            "web" -> "Web" to listOf(
-                "Compose — shared UI across platforms",
-                "React — TypeScript/React"
-            )
+            "ios" -> "iOS" to IOS_UI_OPTIONS
+            "web" -> "Web" to WEB_UI_OPTIONS
             else -> return null
         }
 
@@ -304,14 +335,7 @@ class TuiWizard(
         terminal.println(bold("  $name UI framework"))
         terminal.println()
 
-        val choice = selectOne(options)
-        return when {
-            choice == null -> "compose"
-            choice.startsWith("Compose") -> "compose"
-            choice.startsWith("SwiftUI") -> "swiftui"
-            choice.startsWith("React") -> "react"
-            else -> "compose"
-        }
+        return resolveUiFramework(selectOne(options))
     }
 
     private fun promptProjectName(): NavResult<String> {
