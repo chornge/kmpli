@@ -27,7 +27,7 @@ class Kmpli(private val io: Platform = Platform()) {
 
     private fun validateProjectName(name: String): String {
         if (!PROJECT_NAME_REGEX.matches(name)) {
-            error(
+            invalidInput(
                 "Invalid project name: '$name'. Use 1-50 characters of Latin letters, digits, " +
                     "spaces, '_' and '-', starting with a letter or digit"
             )
@@ -37,10 +37,10 @@ class Kmpli(private val io: Platform = Platform()) {
 
     private fun validatePackageId(pid: String): String {
         if (pid.length > MAX_PACKAGE_ID_LENGTH) {
-            error("Package ID too long: ${pid.length} chars (max: $MAX_PACKAGE_ID_LENGTH)")
+            invalidInput("Package ID too long: ${pid.length} chars (max: $MAX_PACKAGE_ID_LENGTH)")
         }
         if (!PACKAGE_ID_REGEX.matches(pid)) {
-            error(
+            invalidInput(
                 "Invalid package ID: '$pid'. Use dot-separated lowercase segments of letters, " +
                     "digits and '_', each starting with a letter (e.g. org.example.app)"
             )
@@ -90,7 +90,7 @@ class Kmpli(private val io: Platform = Platform()) {
             val validatedPid = validatePackageId(options.pid!!)
 
             val selectedTemplate = Template.fromId(templateName)
-                ?: error("Invalid template name: $templateName\nAvailable: ${Template.availableTemplates()}")
+                ?: invalidInput("Invalid template name: $templateName\nAvailable: ${Template.availableTemplates()}")
 
             io.printLine("Generating template: ${selectedTemplate.id} -> ${selectedTemplate.description}")
 
@@ -184,7 +184,7 @@ class Kmpli(private val io: Platform = Platform()) {
             val match = Regex("""(\w+)\s*(\(\s*([^)\s]+)\s*\))?""").matchEntire(entry)
             // An unmatchable entry is reported with the offending text quoted, so an empty
             // one (from a stray comma) reads as a missing entry rather than a blank message.
-            val name = match?.groupValues?.get(1)?.lowercase() ?: error(
+            val name = match?.groupValues?.get(1)?.lowercase() ?: invalidInput(
                 if (entry.isEmpty()) {
                     "Empty platform entry in '$raw'. Expected a comma-separated list, " +
                         "e.g. \"android,ios(swiftui)\"."
@@ -197,13 +197,13 @@ class Kmpli(private val io: Platform = Platform()) {
 
             // Validate platform name
             if (name !in VALID_PLATFORMS) {
-                error("Invalid platform: '$name'. Valid platforms: ${VALID_PLATFORMS.joinToString(", ")}")
+                invalidInput("Invalid platform: '$name'. Valid platforms: ${VALID_PLATFORMS.joinToString(", ")}")
             }
 
             // Validate UI framework for platform
             val validUiForPlatform = VALID_UI[name]
             if (validUiForPlatform != null && ui !in validUiForPlatform) {
-                error("Invalid UI '$ui' for platform '$name'. Valid options: ${validUiForPlatform.joinToString(", ")}")
+                invalidInput("Invalid UI '$ui' for platform '$name'. Valid options: ${validUiForPlatform.joinToString(", ")}")
             }
 
             PlatformConfig(name, ui)

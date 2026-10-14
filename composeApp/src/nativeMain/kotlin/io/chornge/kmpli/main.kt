@@ -12,15 +12,17 @@ fun main(args: Array<String>): Unit = runBlocking {
             // Arguments provided: use existing CLI behavior
             Kmpli().parse(args)
         }
-    } catch (e: IllegalStateException) {
-        // error(...) in Kmpli signals invalid user input. Report the message and exit 1
-        // rather than letting it abort with a Kotlin/Native stack trace and SIGABRT.
+    } catch (e: InvalidInputException) {
+        // The user supplied something kmpli cannot accept. Point them at --help, which is only
+        // appropriate because this type means a user mistake rather than an internal failure.
         println("Error: ${e.message}")
+        println("Run 'kmpli --help' for usage.")
         exitProcess(1)
     } catch (e: Exception) {
-        // Unexpected failure. Still no stack trace at the user; name the type so a bug
-        // report says something useful.
-        println("Error: ${e::class.simpleName}: ${e.message}")
+        // Environment or internal failure: a missing extraction tool, a network problem, a
+        // violated invariant. Still no stack trace at the user, but no --help hint either,
+        // because nothing the user types would fix it.
+        println("Error: ${e.message ?: e::class.simpleName}")
         exitProcess(1)
     }
 }

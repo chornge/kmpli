@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gradle and Kotlin/Native caches are keyed per build target, so the two Linux targets no
   longer share one cache entry
 - `make sanity` now runs lint before tests and build
+- Invalid user input raises `InvalidInputException` rather than `IllegalStateException`, so a
+  user mistake can no longer be confused with a violated internal invariant. Input errors now
+  also suggest `kmpli --help`, which environment and IO failures deliberately do not (#28)
 
 ## [1.4.0] - 2026-10-14
 
