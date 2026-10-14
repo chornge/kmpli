@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unzip/tar and placeholder-rewriting path, which the unit tests mock out
 - The aarch64 smoke test runs on real ARM hardware, since that binary is cross-compiled and
   cannot execute on its build host
+- detekt static analysis, run by `make lint` and by CI. Existing findings are recorded in
+  `config/detekt-baseline.xml` so they do not block the build, while new ones fail it (#24)
 
 ### Fixed
 
@@ -34,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ubuntu-latest` migration to Ubuntu 26
 - Gradle and Kotlin/Native caches are keyed per build target, so the two Linux targets no
   longer share one cache entry
+- `make sanity` now runs lint before tests and build
 
 ## [1.4.0] - 2026-10-14
 

@@ -4,6 +4,36 @@ val host = org.jetbrains.kotlin.konan.target.HostManager.host
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.detekt)
+}
+
+// Static analysis. Source sets are listed explicitly because the Kotlin Multiplatform plugin
+// does not expose them to detekt the way the JVM plugin does, and this project has no JVM target.
+detekt {
+    buildUponDefaultConfig = true
+    ignoreFailures = false
+    config.setFrom(rootProject.file("config/detekt.yml"))
+    baseline = rootProject.file("config/detekt-baseline.xml")
+    source.setFrom(
+        "src/commonMain/kotlin",
+        "src/nativeMain/kotlin",
+        "src/commonTest/kotlin",
+        "src/nativeTest/kotlin"
+    )
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "17"
+    reports {
+        html.required.set(true)
+        xml.required.set(false)
+        sarif.required.set(false)
+        md.required.set(false)
+    }
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+    jvmTarget = "17"
 }
 
 // `appVersion` in gradle/libs.versions.toml is the single declared version of the CLI.

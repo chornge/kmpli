@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:Kmpli.kt$Kmpli$fun parse(args: Array&lt;String&gt;)</ID>
+    <ID>CyclomaticComplexMethod:Kmpli.kt$Kmpli$internal fun parseArgs(args: Array&lt;String&gt;): CliOptions</ID>
+    <ID>CyclomaticComplexMethod:TuiWizard.kt$TuiWizard$fun run(): WizardResult?</ID>
+    <ID>CyclomaticComplexMethod:TuiWizard.kt$TuiWizard$private fun promptSelectPlatforms(): NavResult&lt;List&lt;PlatformConfig&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:TuiWizard.kt$TuiWizard$private fun selectOneCircularWithCursor(options: List&lt;String&gt;, startIndex: Int = 0): Pair&lt;String?, Int&gt;</ID>
+    <ID>LongMethod:Kmpli.kt$Kmpli$fun parse(args: Array&lt;String&gt;)</ID>
+    <ID>LongMethod:TuiWizard.kt$TuiWizard$fun run(): WizardResult?</ID>
+    <ID>LoopWithTooManyJumpStatements:PlatformNative.kt$&lt;no name provided&gt;$for</ID>
+    <ID>MagicNumber:Kmpli.kt$Kmpli$3</ID>
+    <ID>MagicNumber:PlatformNative.kt$30_000</ID>
+    <ID>MagicNumber:PlatformNative.kt$&lt;no name provided&gt;$200</ID>
+    <ID>MagicNumber:PlatformNative.kt$&lt;no name provided&gt;$299</ID>
+    <ID>MagicNumber:TuiWizard.kt$TuiWizard$3</ID>
+    <ID>MagicNumber:TuiWizard.kt$TuiWizard$4</ID>
+    <ID>MagicNumber:TuiWizard.kt$TuiWizard$5</ID>
+    <ID>MaxLineLength:Kmpli.kt$Kmpli$io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")</ID>
+    <ID>MaxLineLength:Kmpli.kt$Kmpli$return "https://kmp.jetbrains.com/generateKmtProject?name=${io.urlEncode(name)}&amp;id=${io.urlEncode(id)}&amp;spec=$encodedSpec"</ID>
+    <ID>MaxLineLength:Kmpli.kt$Kmpli.Companion$// Valid package ID: each segment starts with lowercase letter, contains lowercase letters, digits, or underscores</ID>
+    <ID>MaxLineLength:TuiWizard.kt$TuiWizard$private</ID>
+    <ID>NestedBlockDepth:PlatformNative.kt$@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class, kotlin.experimental.ExperimentalNativeApi::class) actual fun Platform(): Platform</ID>
+    <ID>NestedBlockDepth:TuiWizard.kt$TuiWizard$fun run(): WizardResult?</ID>
+    <ID>NestedBlockDepth:TuiWizard.kt$TuiWizard$private fun promptSelectPlatforms(): NavResult&lt;List&lt;PlatformConfig&gt;&gt;</ID>
+    <ID>ReturnCount:TuiWizard.kt$TuiWizard$fun run(): WizardResult?</ID>
+    <ID>ReturnCount:TuiWizard.kt$TuiWizard$private fun promptSelectPlatforms(): NavResult&lt;List&lt;PlatformConfig&gt;&gt;</ID>
+    <ID>ReturnCount:TuiWizard.kt$TuiWizard$private fun selectOneWithCursor(options: List&lt;String&gt;, showHint: Boolean = true, startIndex: Int = 0): Pair&lt;String?, Int&gt;</ID>
+    <ID>SwallowedException:TuiWizard.kt$TuiWizard$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlatformNative.kt$&lt;no name provided&gt;$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TuiWizard.kt$TuiWizard$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:main.kt$e: Exception</ID>
+    <ID>TooManyFunctions:TuiWizard.kt$TuiWizard</ID>
+    <ID>UnusedPrivateProperty:PlatformNative.kt$&lt;no name provided&gt;$i</ID>
+    <ID>UseCheckOrError:PlatformNative.kt$&lt;no name provided&gt;$throw IllegalStateException("HTTP $statusCode: ${response.status.description}")</ID>
+    <ID>WildcardImport:Kmpli.kt$import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:PlatformNative.kt$import platform.posix.*</ID>
+    <ID>WildcardImport:TuiWizard.kt$import com.github.ajalt.mordant.rendering.TextColors.*</ID>
+    <ID>WildcardImport:TuiWizard.kt$import com.github.ajalt.mordant.rendering.TextStyles.*</ID>
+  </CurrentIssues>
+</SmellBaseline>
