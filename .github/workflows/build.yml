@@ -158,8 +158,16 @@ jobs:
           fi
 
           sudo dpkg --add-architecture arm64
-          printf 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports %s main restricted universe multiverse\ndeb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports %s-updates main restricted universe multiverse\n' \
-            "$codename" "$codename" | sudo tee /etc/apt/sources.list.d/arm64-ports.list >/dev/null
+
+          # Every suite the amd64 side has must be mirrored for arm64. Packages such as
+          # libcurl4t64 are Multi-Arch: same, which requires identical versions across
+          # architectures, so if arm64 cannot see a suite that amd64 can, the two drift and
+          # install fails with "not going to be installed". That is exactly what happened when
+          # noble-security published 8.5.0-2ubuntu10.16 while this list only reached
+          # noble-updates at 10.15.
+          for suite in "$codename" "$codename-updates" "$codename-security" "$codename-backports"; do
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $suite main restricted universe multiverse"
+          done | sudo tee /etc/apt/sources.list.d/arm64-ports.list >/dev/null
 
           sudo apt-get update
 
