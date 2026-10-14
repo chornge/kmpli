@@ -131,3 +131,30 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
+
+  # Single required status check for the main branch ruleset, which requires the context
+  # "build". The matrix job reports one context per target ("Build (LinuxX64)" and so on),
+  # so requiring those individually would mean editing the ruleset every time a target is
+  # added. This job reports a stable "build" instead.
+  #
+  # A matrix job's result is "success" only when every leg succeeded, so one gate covers
+  # them all. if: always() is required so the gate still runs (and fails) when a dependency
+  # fails; without it the job would be skipped and report no useful conclusion.
+  build-gate:
+    name: build
+    needs: [test, build]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require test and build to have succeeded
+        run: |
+          echo "test:  ${{ needs.test.result }}"
+          echo "build: ${{ needs.build.result }}"
+
+          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.build.result }}" != "success" ]; then
+            echo "::error::build-gate failed: test=${{ needs.test.result }} build=${{ needs.build.result }}"
+            exit 1
+          fi
+
+          echo "All required jobs succeeded"
