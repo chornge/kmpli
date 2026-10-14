@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The aarch64 smoke test runs on real ARM hardware, since that binary is cross-compiled and
   cannot execute on its build host
 
+### Fixed
+
+- Template extraction on Windows failed whenever Git for Windows was installed, because `tar`
+  on PATH resolves to GNU tar, which cannot read zip archives. The Windows-bundled bsdtar is
+  now invoked by absolute path, with a PowerShell `Expand-Archive` fallback
+- A failed extraction reported `Project generation complete!` and exited `0`. Extraction
+  failures, an unrecognized project folder and an empty result now report an error and exit `1`
+
 ### Changed
 
 - Launcher resolves `aarch64`/`arm64` on Linux to `kmpli-linux-arm64` instead of reporting the
