@@ -71,14 +71,20 @@ kotlin {
                     // Where dpkg multiarch places arm64 libraries. Harmless when absent.
                     linkerOpts("-L/usr/lib/aarch64-linux-gnu")
 
-                    // ktor bundles a *static* libcurl.a for this target rather than linking the
-                    // system shared library, so libcurl's entire dependency closure (libssh,
-                    // OpenSSL, nghttp2, RTMP and the rest) has to be named explicitly. None of it
-                    // is in the Kotlin/Native sysroot or in linkerKonanFlags.linux_arm64.
-                    //
-                    // The exact list is whatever Ubuntu built libcurl against, so CI derives it
-                    // with `pkg-config --libs --static libcurl` against the arm64 .pc file and
-                    // passes it here instead of it being hardcoded and drifting.
+                    // Ubuntu's arm64 shared libraries are built against glibc 2.39 and reference
+                    // versioned symbols (pthread_detach@GLIBC_2.34 and friends) that Kotlin/Native's
+                    // glibc 2.25 sysroot does not contain. ld.lld verifies a shared library's own
+                    // undefined symbols by default; the real glibc on the user's machine resolves
+                    // them at runtime, so that check has to be relaxed for this cross-link.
+                    linkerOpts("--allow-shlib-undefined")
+
+                    // GCC 8.3.0 in the Kotlin aarch64 toolchain predates outline atomics, so it
+                    // cannot provide __aarch64_swp4_acq that Ubuntu's GCC 14-built libcurl calls.
+                    // Ubuntu's libgcc_s does; CI creates the symlink -lgcc_s needs.
+                    linkerOpts("-lgcc_s")
+
+                    // -lcurl and friends, from `pkg-config --libs libcurl` against the arm64 .pc
+                    // file. Passed in rather than hardcoded so it cannot drift from the package.
                     val extra = providers
                         .environmentVariable("KMPLI_LINUX_ARM64_LINKER_OPTS")
                         .orNull
