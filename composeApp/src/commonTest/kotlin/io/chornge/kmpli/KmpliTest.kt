@@ -47,6 +47,212 @@ class KmpliTest {
     }
 
     @Test
+    fun testParseArgs_versionFlag() {
+        cli.parse(arrayOf("--version"))
+        assertTrue(io.printed.any { it.contains(KMPLI_VERSION) })
+    }
+
+    @Test
+    fun testParseArgs_versionShortFlag() {
+        cli.parse(arrayOf("-v"))
+        assertTrue(io.printed.any { it.contains(KMPLI_VERSION) })
+    }
+
+    @Test
+    fun testParseArgs_versionTakesPrecedenceOverHelp() {
+        cli.parse(arrayOf("--help", "--version"))
+        assertTrue(io.printed.any { it.contains(KMPLI_VERSION) })
+        assertTrue(io.printed.none { it.contains("Usage:") })
+    }
+
+    // org.Example.app is a valid Java package name but is rejected here, so the message
+    // must describe the lowercase rule instead of appealing to Java's.
+    @Test
+    fun testPackageId_errorDescribesTheLowercaseRule() {
+        val message = assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=Foo", "--pid=org.Example.app"))
+        }.message!!
+        assertTrue(message.contains("lowercase"), message)
+        assertFalse(message.contains("Java"), message)
+    }
+
+    // A leading hyphen is rejected by the regex, so the message must say why rather than
+    // listing '-' among the allowed characters and leaving the user guessing.
+    @Test
+    fun testProjectName_errorExplainsTheLeadingCharacterRule() {
+        val message = assertFailsWith<IllegalStateException> {
+            cli.parse(arrayOf("--name=-foo", "--pid=org.test"))
+        }.message!!
+        assertTrue(message.contains("starting with a letter or digit"), message)
+    }
+
+    @Test
+    fun testHelp_documentsThePackageIdLengthLimit() {
+        cli.parse(arrayOf("--help"))
+        val pidLine = io.printed.first { it.trimStart().startsWith("--pid") }
+        assertTrue(pidLine.contains("${Kmpli.MAX_PACKAGE_ID_LENGTH}"), pidLine)
+    }
+
+    // The regex permits spaces in a project name, so the help must not imply otherwise.
+    @Test
+    fun testHelp_documentsThatProjectNamesMayContainSpaces() {
+        cli.parse(arrayOf("--help"))
+        val nameLine = io.printed.first { it.trimStart().startsWith("--name") }
+        assertTrue(nameLine.contains("spaces"), nameLine)
+    }
+
+    // --- version contract -----------------------------------------------------------
+    // KMPLI_VERSION is generated from appVersion in gradle/libs.versions.toml, and
+    // release.yml refuses to publish a tag that disagrees with it. Checking the shape
+    // here fails on a PR instead of only at tag time.
+    @Test
+    fun testVersion_isSemverWithVPrefix() {
+        assertTrue(
+            Regex("""^v\d+\.\d+\.\d+$""").matches(KMPLI_VERSION),
+            "appVersion must look like v1.2.3 but was '$KMPLI_VERSION'"
+        )
+    }
+
+    // --- argument parsing -----------------------------------------------------------
+    @Test
+    fun testParseArgs_separateValueIsNotReportedAsUnknown() {
+        cli.parse(arrayOf("--name", "Foo", "--help"))
+        assertTrue(io.printed.none { it.contains("Unknown argument") }, io.printed.toString())
+        assertTrue(io.printed.any { it.contains("Usage:") })
+    }
+
+    @Test
+    fun testParseArgs_separateAndInlineValuesAgree() {
+        val inline = cli.parseArgs(arrayOf("--name=Foo", "--pid=org.foo"))
+        val separate = cli.parseArgs(arrayOf("--name", "Foo", "--pid", "org.foo"))
+        assertEquals(inline.name, separate.name)
+        assertEquals(inline.pid, separate.pid)
+    }
+
+    @Test
+    fun testParseArgs_rejectsFlagWithExtraSuffix() {
+        cli.parse(arrayOf("--nameXYZ=Foo", "--help"))
+        assertTrue(io.printed.any { it.contains("Unknown argument: --nameXYZ=Foo") }, io.printed.toString())
+    }
+
+    @Test
+    fun testParseArgs_valueFlagDoesNotSwallowAFollowingFlag() {
+        val options = cli.parseArgs(arrayOf("--name", "--version"))
+        assertEquals("", options.name)
+        assertTrue(options.version)
+    }
+
+    // --- template lookup ------------------------------------------------------------
+    // Users type template names by hand, and fromId matches case-insensitively.
+    @Test
+    fun testTemplateFromId_isCaseInsensitive() {
+        assertEquals("shared-ui", Template.fromId("SHARED-UI")?.id)
+        assertEquals("native-ui-amper", Template.fromId("Native-UI-Amper")?.id)
+    }
+
+    @Test
+    fun testTemplateFromId_returnsNullForUnknown() {
+        assertNull(Template.fromId("nope"))
+        assertNull(Template.fromId(""))
+    }
+
+    @Test
+    fun testAvailableTemplates_listsEveryId() {
+        val listed = Template.availableTemplates()
+        for (id in listOf("shared-ui", "native-ui", "library", "shared-ui-amper", "native-ui-amper")) {
+            assertTrue(listed.contains(id), "availableTemplates() omitted '$id': $listed")
+        }
+    }
+
+    // --- platform parsing -----------------------------------------------------------
+    @Test
+    fun testParsePlatforms_toleratesWhitespaceAroundEntries() {
+        val parsed = cli.parsePlatforms(" android , ios ")
+        assertEquals(listOf("android", "ios"), parsed.map { it.name })
+    }
+
+    @Test
+    fun testParsePlatforms_usesExplicitUiOverDefault() {
+        assertEquals("swiftui", cli.parsePlatforms("ios(swiftui)").single().ui)
+        assertEquals("react", cli.parsePlatforms("web(react)").single().ui)
+    }
+
+    @Test
+    fun testParsePlatforms_defaultsUiToComposeWhenOmitted() {
+        assertEquals("compose", cli.parsePlatforms("ios").single().ui)
+    }
+
+    @Test
+    fun testParsePlatforms_mixedUiAcrossPlatforms() {
+        val parsed = cli.parsePlatforms("android,ios(swiftui),web(react)")
+        assertEquals(listOf("android", "ios", "web"), parsed.map { it.name })
+        assertEquals(listOf("compose", "swiftui", "react"), parsed.map { it.ui })
+    }
+
+    @Test
+    fun testParsePlatforms_rejectsAnEmptyEntryWithAReadableMessage() {
+        val message = assertFailsWith<IllegalStateException> {
+            cli.parsePlatforms("android,,ios")
+        }.message!!
+        assertTrue(message.contains("Empty platform entry"), message)
+        // The offending input is quoted, so a stray comma never yields a dangling message.
+        assertTrue(message.contains("android,,ios"), message)
+    }
+
+    // The whole entry must be consumed, so these are errors rather than silently
+    // becoming a bare platform name with the default UI.
+    @Test
+    fun testParsePlatforms_rejectsAnUnbalancedParenthesis() {
+        val message = assertFailsWith<IllegalStateException> {
+            cli.parsePlatforms("ios(swiftui")
+        }.message!!
+        assertTrue(message.contains("'ios(swiftui'"), message)
+    }
+
+    @Test
+    fun testParsePlatforms_rejectsTrailingJunkAfterAValidName() {
+        assertFailsWith<IllegalStateException> { cli.parsePlatforms("android!!!") }
+        assertFailsWith<IllegalStateException> { cli.parsePlatforms("ios(swiftui))") }
+    }
+
+    @Test
+    fun testParsePlatforms_rejectsEmptyParentheses() {
+        assertFailsWith<IllegalStateException> { cli.parsePlatforms("ios()") }
+    }
+
+    @Test
+    fun testParsePlatforms_toleratesSpacingAroundTheUiGroup() {
+        assertEquals("swiftui", cli.parsePlatforms("ios (swiftui)").single().ui)
+        assertEquals("swiftui", cli.parsePlatforms("ios( swiftui )").single().ui)
+    }
+
+    @Test
+    fun testParsePlatforms_rejectsAMalformedEntryQuotingTheOffendingText() {
+        val message = assertFailsWith<IllegalStateException> {
+            cli.parsePlatforms("android,!!!")
+        }.message!!
+        assertTrue(message.contains("'!!!'"), message)
+        assertTrue(message.contains("NAME(UI)"), message)
+    }
+
+    // --- url building ---------------------------------------------------------------
+    // Project names may contain spaces, so the name and package id must be encoded or
+    // the generated request is malformed.
+    @Test
+    fun testBuildUrl_encodesNameAndPackageId() {
+        val url = cli.buildUrl("My Project", "org.my.project", cli.parsePlatforms("android"), false)
+        assertTrue(url.contains("name=My%20Project"), url)
+        assertFalse(url.contains("name=My Project"), url)
+    }
+
+    @Test
+    fun testBuildUrl_includesTestsFlagOnlyWhenRequested() {
+        val platforms = cli.parsePlatforms("android")
+        assertTrue(cli.buildUrl("Foo", "org.foo", platforms, true).contains("include_tests"))
+        assertFalse(cli.buildUrl("Foo", "org.foo", platforms, false).contains("include_tests"))
+    }
+
+    @Test
     fun testParseArgs_unknownArgument() {
         val args = arrayOf("--unknown", "--name=Foo")
         cli.parse(args)

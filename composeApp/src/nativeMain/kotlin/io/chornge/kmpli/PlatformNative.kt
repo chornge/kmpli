@@ -39,7 +39,7 @@ actual fun Platform(): Platform = object : Platform {
 
             // Warn if we got HTML instead of a ZIP (likely TLS/redirect issue)
             if (contentType?.contains("html", ignoreCase = true) == true) {
-                printLine("⚠ Warning: received HTML instead of ZIP — likely a TLS or redirect issue.")
+                printLine("⚠ Warning: received HTML instead of ZIP (likely a TLS or redirect issue).")
             }
 
             val bytes = response.bodyAsChannel().toByteArray()

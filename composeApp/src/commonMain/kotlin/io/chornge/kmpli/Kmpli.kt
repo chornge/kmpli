@@ -11,7 +11,9 @@ class Kmpli(private val io: Platform = Platform()) {
         // Valid package ID: each segment starts with lowercase letter, contains lowercase letters, digits, or underscores
         private val PACKAGE_ID_REGEX = Regex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$")
         // Package ID length limit (reasonable max for Java packages)
-        private const val MAX_PACKAGE_ID_LENGTH = 100
+        internal const val MAX_PACKAGE_ID_LENGTH = 100
+        // Flags that take a value, either as --flag=value or --flag value
+        private val VALUE_FLAGS = setOf("--name", "--pid", "--template", "--platforms")
         // Valid platforms
         private val VALID_PLATFORMS = setOf("android", "ios", "desktop", "web", "server")
         // Valid UI frameworks per platform
@@ -25,7 +27,10 @@ class Kmpli(private val io: Platform = Platform()) {
 
     private fun validateProjectName(name: String): String {
         if (!PROJECT_NAME_REGEX.matches(name)) {
-            error("Invalid project name: '$name'. Only Latin characters, digits, spaces, '_' and '-' are allowed (1-50 chars)")
+            error(
+                "Invalid project name: '$name'. Use 1-50 characters of Latin letters, digits, " +
+                    "spaces, '_' and '-', starting with a letter or digit"
+            )
         }
         return name
     }
@@ -35,7 +40,10 @@ class Kmpli(private val io: Platform = Platform()) {
             error("Package ID too long: ${pid.length} chars (max: $MAX_PACKAGE_ID_LENGTH)")
         }
         if (!PACKAGE_ID_REGEX.matches(pid)) {
-            error("Invalid package ID: '$pid'. Must be a valid Java package name (e.g., org.example.app)")
+            error(
+                "Invalid package ID: '$pid'. Use dot-separated lowercase segments of letters, " +
+                    "digits and '_', each starting with a letter (e.g. org.example.app)"
+            )
         }
         return pid
     }
@@ -43,16 +51,23 @@ class Kmpli(private val io: Platform = Platform()) {
     fun parse(args: Array<String>) = runBlocking {
         val options = parseArgs(args)
 
+        if (options.version) {
+            io.printLine("kmpli $KMPLI_VERSION")
+            return@runBlocking
+        }
+
         if (options.help == true) {
             io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")
             io.printLine("")
             io.printLine("Options:")
-            io.printLine("  --name           Project name (alphanumeric, hyphens, underscores)")
-            io.printLine("  --pid            Package identifier (e.g., org.example.app)")
+            io.printLine("  --name           Project name: letters, digits, spaces, '_' and '-'")
+            io.printLine("                   (1-50 chars, must start with a letter or digit)")
+            io.printLine("  --pid            Package identifier, e.g. org.example.app (max 100 chars)")
             io.printLine("  --platforms      Comma-separated list of targets")
             io.printLine("  --template       Predefined project template")
             io.printLine("  --include-tests  Include sample tests")
             io.printLine("  --help, -h       Show this help message")
+            io.printLine("  --version, -v    Show the installed kmpli version")
             io.printLine("")
             io.printLine("Platforms: android, ios, desktop, web, server")
             io.printLine("UI options: compose (default), swiftui (ios), react (web)")
@@ -114,23 +129,34 @@ class Kmpli(private val io: Platform = Platform()) {
         io.printLine("Project generation complete!")
     }
 
-    private fun parseArgs(args: Array<String>): CliOptions {
+    internal fun parseArgs(args: Array<String>): CliOptions {
         val options = CliOptions()
         var i = 0
         while (i < args.size) {
             val arg = args[i]
-            when {
-                arg.startsWith("--name") -> options.name = arg.substringAfter("=", args.getOrNull(i + 1) ?: "")
-                arg.startsWith("--pid") -> options.pid = arg.substringAfter("=", args.getOrNull(i + 1) ?: "")
-                arg.startsWith("--template") -> options.template = arg.substringAfter("=", args.getOrNull(i + 1) ?: "")
-                arg.startsWith("--platforms") -> options.platforms =
-                    arg.substringAfter("=", args.getOrNull(i + 1) ?: "")
+            // Flags are matched exactly, so a typo like --nameXYZ is reported rather than
+            // silently accepted as --name.
+            val flag = arg.substringBefore("=")
+            val inlineValue = if (arg.contains("=")) arg.substringAfter("=") else null
+            // A value may instead follow as the next argument. Only consume it when it cannot
+            // itself be a flag, so "--name --help" still honours --help. No valid name, package
+            // id, template or platform list starts with "-".
+            val nextValue = args.getOrNull(i + 1)?.takeUnless { it.startsWith("-") }
+            // Advance past a separately supplied value so it is not re-read as a stray argument.
+            val consumed = if (flag in VALUE_FLAGS && inlineValue == null && nextValue != null) 2 else 1
+            val value = inlineValue ?: nextValue ?: ""
 
-                arg == "--include-tests" -> options.includeTests = true
-                arg == "--help" || arg == "-h" -> options.help = true
+            when (flag) {
+                "--name" -> options.name = value
+                "--pid" -> options.pid = value
+                "--template" -> options.template = value
+                "--platforms" -> options.platforms = value
+                "--include-tests" -> options.includeTests = true
+                "--help", "-h" -> options.help = true
+                "--version", "-v" -> options.version = true
                 else -> io.printLine("Unknown argument: $arg")
             }
-            i += 1
+            i += consumed
         }
         return options
     }
@@ -141,7 +167,8 @@ class Kmpli(private val io: Platform = Platform()) {
         var template: String? = null,
         var platforms: String? = null,
         var includeTests: Boolean = false,
-        var help: Boolean? = null
+        var help: Boolean? = null,
+        var version: Boolean = false
     )
 
     data class PlatformConfig(val name: String, val ui: String? = null)
@@ -149,8 +176,23 @@ class Kmpli(private val io: Platform = Platform()) {
     fun parsePlatforms(input: String?): List<PlatformConfig> {
         val raw = input?.takeIf { it.isNotBlank() } ?: "android(compose),ios(compose)"
         return raw.split(",").map { part ->
-            val match = Regex("""(\w+)(\(([^)]+)\))?""").find(part.trim())
-            val name = match?.groupValues?.get(1)?.lowercase() ?: error("Invalid platform format: $part")
+            val entry = part.trim()
+            // matchEntire, not find: the whole entry must be consumed, so trailing junk and an
+            // unbalanced parenthesis are rejected instead of silently dropped (which previously
+            // turned "ios(swiftui" into ios with the default UI). \s* keeps benign spacing such
+            // as "ios (swiftui)" working. Group 1 is the name, group 3 the UI.
+            val match = Regex("""(\w+)\s*(\(\s*([^)\s]+)\s*\))?""").matchEntire(entry)
+            // An unmatchable entry is reported with the offending text quoted, so an empty
+            // one (from a stray comma) reads as a missing entry rather than a blank message.
+            val name = match?.groupValues?.get(1)?.lowercase() ?: error(
+                if (entry.isEmpty()) {
+                    "Empty platform entry in '$raw'. Expected a comma-separated list, " +
+                        "e.g. \"android,ios(swiftui)\"."
+                } else {
+                    "Invalid platform entry: '$entry'. Expected NAME or NAME(UI), " +
+                        "e.g. \"android\" or \"ios(swiftui)\"."
+                }
+            )
             val ui = match.groupValues[3].ifBlank { "compose" }.lowercase()
 
             // Validate platform name
