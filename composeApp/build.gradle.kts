@@ -78,11 +78,6 @@ kotlin {
                     // them at runtime, so that check has to be relaxed for this cross-link.
                     linkerOpts("--allow-shlib-undefined")
 
-                    // GCC 8.3.0 in the Kotlin aarch64 toolchain predates outline atomics, so it
-                    // cannot provide __aarch64_swp4_acq that Ubuntu's GCC 14-built libcurl calls.
-                    // Ubuntu's libgcc_s does; CI creates the symlink -lgcc_s needs.
-                    linkerOpts("-lgcc_s")
-
                     // libcurl's full static closure, from `pkg-config --libs --static libcurl`
                     // against the arm64 .pc file. Needed because ktor force-includes a static
                     // libcurl.a whose members call into libssh, GSSAPI and OpenSSL. Passed in

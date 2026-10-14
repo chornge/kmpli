@@ -170,7 +170,8 @@ jobs:
             libkrb5-dev:arm64 \
             libldap-dev:arm64 \
             libbrotli-dev:arm64 \
-            libzstd-dev:arm64
+            libzstd-dev:arm64 \
+            libgcc-14-dev:arm64
 
           echo "--- linker symlinks available for -l resolution ---"
           ls -1 /usr/lib/aarch64-linux-gnu/*.so 2>/dev/null \
@@ -182,12 +183,9 @@ jobs:
 
           # Kotlin/Native's aarch64 toolchain is GCC 8.3.0, which predates outline atomics and
           # so cannot supply __aarch64_swp4_acq, referenced by Ubuntu's GCC 14-built libcurl.
-          # Ubuntu's libgcc_s has those helpers, but only the runtime .so.1 gets installed and
-          # -lgcc_s needs the unversioned symlink.
-          if [ ! -e /usr/lib/aarch64-linux-gnu/libgcc_s.so ]; then
-            sudo ln -sf libgcc_s.so.1 /usr/lib/aarch64-linux-gnu/libgcc_s.so
-          fi
-          ls -l /usr/lib/aarch64-linux-gnu/libgcc_s.so*
+          # Those helpers live only in the static libgcc.a: libgcc_s.so.1 exports no
+          # __aarch64_* symbols at all, so -lgcc_s cannot resolve them.
+          find /usr/lib/gcc/aarch64-linux-gnu -name libgcc.a | sed 's/^/  libgcc.a: /'
 
       # --static is required: ktor's klib force-includes a prebuilt static libcurl.a as an
       # explicit linker input, and its members reference libssh, GSSAPI and OpenSSL. Passing
@@ -209,6 +207,14 @@ jobs:
           echo "libcurl static closure: $opts"
 
           test -n "$opts" || { echo "::error::pkg-config returned no libs for arm64 libcurl"; exit 1; }
+
+          # Static libgcc for the outline-atomics helpers. Its directory is GCC-version
+          # specific, so locate it rather than hardcoding the version.
+          gccdir=$(dirname "$(find /usr/lib/gcc/aarch64-linux-gnu -name libgcc.a | head -1)")
+          test -d "$gccdir" || { echo "::error::arm64 libgcc.a not found"; exit 1; }
+          opts="$opts -L$gccdir -lgcc"
+
+          echo "final arm64 linker opts: $opts"
           echo "KMPLI_LINUX_ARM64_LINKER_OPTS=$opts" >> "$GITHUB_ENV"
 
       - name: Windows Dependencies
