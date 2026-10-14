@@ -78,6 +78,11 @@ jobs:
           - os: ubuntu-latest
             target: LinuxX64
 
+          # Cross-compiled from the x86_64 runner: Kotlin/Native publishes no
+          # linux-aarch64 host compiler, so aarch64 cannot be built natively.
+          - os: ubuntu-latest
+            target: LinuxArm64
+
           - os: windows-latest
             target: MingwX64
 
@@ -119,6 +124,34 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libssl-dev
 
+      # Cross-linking to aarch64 needs arm64 libcurl and its dependencies on an x86_64
+      # runner. Ubuntu serves arm64 from ports.ubuntu.com rather than archive.ubuntu.com,
+      # so the existing sources must be pinned to amd64 first or apt-get update 404s.
+      - name: Linux arm64 Cross Dependencies
+        if: matrix.target == 'LinuxArm64'
+        run: |
+          set -eux
+          codename=$(lsb_release -cs)
+
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            sudo sed -i '/^Architectures:/d' /etc/apt/sources.list.d/ubuntu.sources
+            sudo sed -i 's/^Types: deb$/Types: deb\nArchitectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
+          fi
+
+          if [ -s /etc/apt/sources.list ]; then
+            sudo sed -i 's|^deb \(http\)|deb [arch=amd64] \1|' /etc/apt/sources.list
+          fi
+
+          sudo dpkg --add-architecture arm64
+          printf 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports %s main restricted universe multiverse\ndeb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports %s-updates main restricted universe multiverse\n' \
+            "$codename" "$codename" | sudo tee /etc/apt/sources.list.d/arm64-ports.list >/dev/null
+
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev:arm64 libssl-dev:arm64 zlib1g-dev:arm64
+
+          echo "--- arm64 libraries available to the linker ---"
+          ls -1 /usr/lib/aarch64-linux-gnu/ | grep -E '^lib(curl|ssl|crypto|nghttp2|rtmp|ssh|psl|gssapi|z)' || true
+
       - name: Windows Dependencies
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
@@ -131,6 +164,54 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew compileKotlin${{ matrix.target }} linkReleaseExecutable${{ matrix.target }}
+
+      # Linking can succeed while producing the wrong architecture, so check explicitly.
+      - name: Verify aarch64 Binary
+        if: matrix.target == 'LinuxArm64'
+        run: |
+          set -eux
+          bin=composeApp/build/bin/linuxArm64/releaseExecutable/kmpli.kexe
+          file "$bin"
+          file "$bin" | grep -q 'ARM aarch64' || { echo "::error::not an aarch64 binary"; exit 1; }
+          echo "--- shared libraries it will need at runtime ---"
+          readelf -d "$bin" | grep NEEDED || true
+
+      - name: Upload aarch64 Binary
+        if: matrix.target == 'LinuxArm64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmpli-linux-arm64
+          path: composeApp/build/bin/linuxArm64/releaseExecutable/kmpli.kexe
+          if-no-files-found: error
+
+  # GitHub's arm64 Linux runners cannot BUILD kmpli (no linux-aarch64 Kotlin/Native host
+  # compiler exists) but they can RUN an aarch64 binary. This is the only way to prove the
+  # cross-compiled artifact actually works, rather than merely that it linked. It is kept
+  # out of build-gate for now so a runner-availability problem does not block the branch.
+  smoke-test-linux-arm64:
+    name: Smoke Test (LinuxArm64)
+    needs: build
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Download aarch64 Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: kmpli-linux-arm64
+
+      - name: Run on real aarch64 hardware
+        run: |
+          set -eux
+          uname -m
+          chmod +x kmpli.kexe
+
+          ./kmpli.kexe --version
+          ./kmpli.kexe --help | head -3
+
+          # Exercises libcurl and TLS, which is the part cross-linking puts at risk.
+          ./kmpli.kexe --name="SmokeTest" --pid=org.smoke.test --template=library
+          echo "--- generated ---"
+          ls -la
 
   # Single required status check for the main branch ruleset, which requires the context
   # "build". The matrix job reports one context per target ("Build (LinuxX64)" and so on),

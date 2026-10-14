@@ -51,10 +51,25 @@ kotlin {
             }
         }
 
-        KonanTarget.LINUX_X64 -> linuxX64("linuxX64") {
-            binaries.executable {
-                entryPoint = "io.chornge.kmpli.main"
-                baseName = "kmpli"
+        // linux_arm64 has no Kotlin/Native host compiler of its own, so the aarch64 binary is
+        // cross-compiled from the linux_x64 host. Kotlin downloads the aarch64 gcc toolchain and
+        // sysroot automatically, but that sysroot carries no libcurl, so the CI job installs the
+        // arm64 libcurl packages and the linker is pointed at them below.
+        KonanTarget.LINUX_X64 -> {
+            linuxX64("linuxX64") {
+                binaries.executable {
+                    entryPoint = "io.chornge.kmpli.main"
+                    baseName = "kmpli"
+                }
+            }
+
+            linuxArm64("linuxArm64") {
+                binaries.executable {
+                    entryPoint = "io.chornge.kmpli.main"
+                    baseName = "kmpli"
+                    // Where dpkg multiarch places arm64 libraries. Harmless when absent.
+                    linkerOpts("-L/usr/lib/aarch64-linux-gnu")
+                }
             }
         }
 
@@ -120,6 +135,9 @@ kotlin {
             KonanTarget.LINUX_X64 -> {
                 sourceSets.getByName("linuxX64Main").dependsOn(nativeMain)
                 sourceSets.getByName("linuxX64Test").dependsOn(nativeTest)
+                // linuxArm64 gets main sources only. Its tests are deliberately not wired:
+                // the aarch64 test binary cannot execute on the x86_64 build host.
+                sourceSets.getByName("linuxArm64Main").dependsOn(nativeMain)
             }
 
             KonanTarget.LINUX_ARM64 -> {
@@ -136,6 +154,10 @@ kotlin {
         }
     }
 }
+
+// The aarch64 test binary cannot run on the x86_64 build host, so keep it out of `allTests`.
+// Without this, `./gradlew allTests` would try to execute it and fail.
+tasks.matching { it.name == "linuxArm64Test" }.configureEach { enabled = false }
 
 val nativeTargets = listOf(
     "MacosX64",
