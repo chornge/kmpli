@@ -83,8 +83,10 @@ kotlin {
                     // Ubuntu's libgcc_s does; CI creates the symlink -lgcc_s needs.
                     linkerOpts("-lgcc_s")
 
-                    // -lcurl and friends, from `pkg-config --libs libcurl` against the arm64 .pc
-                    // file. Passed in rather than hardcoded so it cannot drift from the package.
+                    // libcurl's full static closure, from `pkg-config --libs --static libcurl`
+                    // against the arm64 .pc file. Needed because ktor force-includes a static
+                    // libcurl.a whose members call into libssh, GSSAPI and OpenSSL. Passed in
+                    // rather than hardcoded so it cannot drift from the installed package.
                     val extra = providers
                         .environmentVariable("KMPLI_LINUX_ARM64_LINKER_OPTS")
                         .orNull

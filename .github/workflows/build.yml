@@ -189,10 +189,11 @@ jobs:
           fi
           ls -l /usr/lib/aarch64-linux-gnu/libgcc_s.so*
 
-      # Plain --libs, not --static. The released linux-x64 binary links libcurl dynamically
-      # (DT_NEEDED libcurl.so.4) and lets libcurl pull in OpenSSL, libssh and the rest at
-      # runtime. --static instead dragged that whole closure onto the link line, which is
-      # what produced the libssh and NTLM symbol errors.
+      # --static is required: ktor's klib force-includes a prebuilt static libcurl.a as an
+      # explicit linker input, and its members reference libssh, GSSAPI and OpenSSL. Passing
+      # only -lcurl leaves those undefined, because the archive is linked ahead of the shared
+      # library and wins. The shared libraries this drags in reference a newer glibc than the
+      # Kotlin sysroot, which is what --allow-shlib-undefined in build.gradle.kts handles.
       - name: Resolve arm64 libcurl Link Closure
         if: matrix.target == 'LinuxArm64'
         run: |
@@ -204,8 +205,8 @@ jobs:
           export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
           export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
 
-          opts=$(pkg-config --libs libcurl)
-          echo "libcurl link flags: $opts"
+          opts=$(pkg-config --libs --static libcurl)
+          echo "libcurl static closure: $opts"
 
           test -n "$opts" || { echo "::error::pkg-config returned no libs for arm64 libcurl"; exit 1; }
           echo "KMPLI_LINUX_ARM64_LINKER_OPTS=$opts" >> "$GITHUB_ENV"
