@@ -147,10 +147,34 @@ jobs:
             "$codename" "$codename" | sudo tee /etc/apt/sources.list.d/arm64-ports.list >/dev/null
 
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev:arm64 libssl-dev:arm64 zlib1g-dev:arm64
 
-          echo "--- arm64 libraries available to the linker ---"
-          ls -1 /usr/lib/aarch64-linux-gnu/ | grep -E '^lib(curl|ssl|crypto|nghttp2|rtmp|ssh|psl|gssapi|z)' || true
+          # --force-overwrite: the amd64 and arm64 dev packages both ship /usr/bin/curl-config
+          # with per-architecture contents, so dpkg refuses the overwrite. This job only ever
+          # builds aarch64, so letting the arm64 copy win is safe.
+          #
+          # The -dev packages matter beyond libcurl itself: they provide the unversioned
+          # libfoo.so symlinks the linker resolves -lfoo against. The runtime packages only
+          # ship libfoo.so.N.
+          sudo apt-get install -y -o Dpkg::Options::="--force-overwrite" \
+            libcurl4-openssl-dev:arm64 \
+            libssl-dev:arm64 \
+            zlib1g-dev:arm64 \
+            libnghttp2-dev:arm64 \
+            librtmp-dev:arm64 \
+            libssh-dev:arm64 \
+            libpsl-dev:arm64 \
+            libkrb5-dev:arm64 \
+            libldap-dev:arm64 \
+            libbrotli-dev:arm64 \
+            libzstd-dev:arm64
+
+          echo "--- linker symlinks available for -l resolution ---"
+          ls -1 /usr/lib/aarch64-linux-gnu/*.so 2>/dev/null \
+            | grep -E 'lib(curl|ssl|crypto|nghttp2|rtmp|ssh|psl|gssapi|krb5|z|brotli|zstd)' || true
+
+          echo "--- libcurl.so must exist or -lcurl cannot resolve ---"
+          test -e /usr/lib/aarch64-linux-gnu/libcurl.so \
+            || { echo "::error::arm64 libcurl.so missing"; exit 1; }
 
       - name: Windows Dependencies
         if: startsWith(matrix.os, 'windows')
