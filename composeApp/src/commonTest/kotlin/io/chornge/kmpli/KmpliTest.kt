@@ -229,7 +229,7 @@ class KmpliTest {
     @Test
     fun testTemplateFromId_isCaseInsensitive() {
         assertEquals("shared-ui", Template.fromId("SHARED-UI")?.id)
-        assertEquals("native-ui-amper", Template.fromId("Native-UI-Amper")?.id)
+        assertEquals("native-ui-toolchain", Template.fromId("Native-UI-Toolchain")?.id)
     }
 
     @Test
@@ -241,7 +241,7 @@ class KmpliTest {
     @Test
     fun testAvailableTemplates_listsEveryId() {
         val listed = Template.availableTemplates()
-        for (id in listOf("shared-ui", "native-ui", "library", "shared-ui-amper", "native-ui-amper")) {
+        for (id in listOf("shared-ui", "native-ui", "library", "shared-ui-toolchain", "native-ui-toolchain")) {
             assertTrue(listed.contains(id), "availableTemplates() omitted '$id': $listed")
         }
     }

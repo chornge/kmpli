@@ -218,8 +218,8 @@ kmpli --name="CMPProject" --pid="org.cmp.project"
                     shared-ui -> Shared UI App (Compose)
                     native-ui -> Native UI App (Compose + SwiftUI)
                     library -> Bare-bones Multiplatform Library
-                    shared-ui-amper -> Shared UI App (configured with Amper)
-                    native-ui-amper -> Native UI App (configured with Amper)
+                    shared-ui-toolchain -> Shared UI App (Kotlin Toolchain)
+                    native-ui-toolchain -> Native UI App (Kotlin Toolchain)
   --platforms TEXT  Target platform(s). Optional, defaults to
                     "android(compose),ios(compose)". Comma-separated, each entry
                     written as NAME or NAME(UI):
@@ -259,11 +259,12 @@ kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui"
 kmpli --name="CMPProject" --pid="org.cmp.project" --template="library"
 ```
 
-To generate a template configured with Amper (only available with Shared UI or Native UI). Pick one:
+To generate a template configured with the Kotlin Toolchain rather than Gradle (available for
+Shared UI and Native UI). Pick one:
 
 ```
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui-amper"
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui-amper"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui-toolchain"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui-toolchain"
 ```
 
 ### Troubleshooting

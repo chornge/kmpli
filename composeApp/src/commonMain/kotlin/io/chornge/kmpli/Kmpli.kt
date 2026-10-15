@@ -77,7 +77,7 @@ class Kmpli(private val io: Platform = Platform()) {
         io.printLine("")
         io.printLine("Platforms: android, ios, desktop, web, server")
         io.printLine("UI options: compose (default), swiftui (ios), react (web)")
-        io.printLine("Templates: shared-ui, native-ui, library, shared-ui-amper, native-ui-amper")
+        io.printLine("Templates: shared-ui, native-ui, library, shared-ui-toolchain, native-ui-toolchain")
     }
 
     /** A project name and package ID after defaults have been applied and both validated. */
