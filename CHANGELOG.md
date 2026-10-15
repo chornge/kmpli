@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Scheduled `Upstream Check` workflow, run daily and on demand, covering the two things kmpli
+  does not control: that every template URL in `Template.kt` still resolves, and that
+  `--platforms` generation still works against kmp.jetbrains.com. It tests the latest released
+  binary rather than a build of `main`, opens an issue on failure, and is deliberately not part
+  of `build-gate` so an upstream outage cannot block a merge (#25)
+- `kmpli-source.zip` is now listed under Manual Download in the generated release notes. It was
+  already attached to every release but undocumented
+
+### Fixed
+
+- README listed stale `make` targets: `lint` was missing, and the descriptions of `test` and
+  `sanity` predated those targets changing
+- README told users to install `-dev` packages to run kmpli. The binary needs the runtime
+  libraries (`libcurl.so.4`), not the `.so` symlinks that `-dev` provides; on Debian and Ubuntu
+  `libcurl` arrives with `curl`. The `-dev` packages remain listed under Building from Source,
+  where they are required
+- Quick Start sat above the prerequisites section with no pointer to it, so a reader following
+  it top to bottom on a fresh machine could hit a TLS error with no explanation
+
 ## [1.6.0] - 2026-10-14
 
 ### Added
