@@ -342,6 +342,45 @@ This means your system is missing SSL certificates or curl cannot find them.
    Do not try to `brew link openssl`. The formula is named `openssl@3`, and it is keg-only, so
    Homebrew leaves it unlinked deliberately and the link will fail.
 
+#### Alpine, or any other musl-based distribution
+
+kmpli's Linux binaries are linked against glibc and **cannot run on musl systems** such as Alpine.
+Building from source does not help: Kotlin/Native links against its own bundled glibc sysroot, so
+a binary compiled on Alpine would still require glibc.
+
+**What it looks like.** The download succeeds, then the binary fails to start with a misleading
+message along the lines of:
+
+```
+sh: kmpli: not found
+```
+
+The file is there. What is missing is the dynamic loader it asks for. Confirm it with:
+
+```sh
+ls /lib64/ld-linux-x86-64.so.2
+# No such file or directory  ->  this is the problem
+```
+
+**What to do.** Run kmpli inside a glibc container and write the project into the current
+directory:
+
+```sh
+docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '
+  apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
+  curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+  kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
+  chown -R '"$(id -u):$(id -g)"' /out
+'
+```
+
+The final `chown` matters. Everything inside the container runs as root, so without it the
+generated project would be owned by root on your host. The `$(id -u)` and `$(id -g)` expand on
+your machine, not inside the container.
+
+Alpine's `gcompat` package provides a glibc compatibility layer and may be enough to run the
+binary directly, but this is untested against kmpli.
+
 #### Other Issues
 
 - **Binary not found**: Make sure you've run the installer and restarted your terminal
