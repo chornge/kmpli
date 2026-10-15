@@ -5,8 +5,9 @@
 
 Pronounced `"Comply"`
 
-Generate Kotlin and Compose Multiplatform projects from your terminal. No IDE, no browser, and no
-JVM needed to run it.
+Generate Kotlin and Compose Multiplatform projects from your terminal.
+
+A single native binary: no IDE, no browser, no JVM.
 
 <p align="center">
   <img src="docs/demo.gif" alt="The kmpli interactive wizard generating a project" width="813">
