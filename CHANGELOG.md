@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- CI smoke test covering `--platforms` generation against the live service. The existing smoke
+  tests only exercised `--template`, which is why the regression below went unnoticed
+- Animated demo of the interactive wizard at the top of the README, captured from the real
+  binary by `scripts/record-demo.py`, which drives it through a pseudo-terminal so the demo
+  can be regenerated whenever the wizard changes
+
+### Fixed
+
+- The `shared-ui-amper` and `native-ui-amper` templates returned `HTTP 404`. JetBrains replaced
+  Amper with the Kotlin Toolchain in the Multiplatform Wizard and removed the upstream `amper`
+  branches, so both had been failing for every user who selected them (#31)
+- `--platforms` generation reported `Extraction produced no recognizable project folder` and exited
+  `1` even though the project had been generated correctly. `kmp.jetbrains.com` returns an archive
+  already rooted at the project name, so nothing needs renaming, whereas the template repositories
+  return `<repo>-<branch>` and do. Treating a missing folder as an error in both cases broke the
+  first. Introduced in 1.5.0
+
+### Changed
+
+- Those two templates are renamed to `shared-ui-toolchain` and `native-ui-toolchain` and point at
+  the upstream `kotlin-toolchain` branches, matching what the Multiplatform Wizard now offers.
+  **The old ids are no longer accepted**, so any script using `--template=shared-ui-amper` or
+  `--template=native-ui-amper` needs updating (#31)
+- `unzip` now runs quietly, matching the Windows extraction path. Unix users previously saw a full
+  file listing that Windows users never did
+
 ## [1.5.0] - 2026-10-14
 
 ### Added
