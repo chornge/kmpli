@@ -15,7 +15,13 @@ class Kmpli(private val io: Platform = Platform()) {
         private const val DEFAULT_PROJECT_NAME = "CMPProject"
 
         // Flags that take a value, either as --flag=value or --flag value
-        private val VALUE_FLAGS = setOf("--name", "--pid", "--template", "--platforms")
+        private val VALUE_FLAGS =
+            setOf("--name", "--pid", "--template", "--platforms", "--build-system")
+
+        // Serial values of com.jetbrains.kmp.wizard.api.BuildSystem, matching the wizard
+        // exactly so the flag cannot drift from the API it feeds.
+        private const val DEFAULT_BUILD_SYSTEM = "gradle"
+        private val VALID_BUILD_SYSTEMS = setOf(DEFAULT_BUILD_SYSTEM, "kotlin")
         // Valid platforms
         private val VALID_PLATFORMS = setOf("android", "ios", "desktop", "web", "server")
         // Valid UI frameworks per platform
@@ -71,6 +77,7 @@ class Kmpli(private val io: Platform = Platform()) {
         io.printLine("  --pid            Package identifier, e.g. org.example.app (max 100 chars)")
         io.printLine("  --platforms      Comma-separated list of targets")
         io.printLine("  --template       Predefined project template")
+        io.printLine("  --build-system   gradle (default) or kotlin for the Kotlin Toolchain")
         io.printLine("  --include-tests  Include sample tests")
         io.printLine("  --help, -h       Show this help message")
         io.printLine("  --version, -v    Show the installed kmpli version")
@@ -78,6 +85,22 @@ class Kmpli(private val io: Platform = Platform()) {
         io.printLine("Platforms: android, ios, desktop, web, server")
         io.printLine("UI options: compose (default), swiftui (ios), react (web)")
         io.printLine("Templates: shared-ui, native-ui, library, shared-ui-toolchain, native-ui-toolchain")
+    }
+
+    /**
+     * Validate the build system, which the generator accepts as a `build_system` spec field.
+     * Returns the default when the flag was not given.
+     */
+    internal fun validateBuildSystem(value: String?): String {
+        val resolved = value?.takeIf { it.isNotBlank() } ?: return DEFAULT_BUILD_SYSTEM
+        val normalized = resolved.lowercase()
+        if (normalized !in VALID_BUILD_SYSTEMS) {
+            invalidInput(
+                "Invalid build system: '$resolved'. " +
+                    "Valid options: ${VALID_BUILD_SYSTEMS.joinToString(", ")}"
+            )
+        }
+        return normalized
     }
 
     /** A project name and package ID after defaults have been applied and both validated. */
@@ -126,9 +149,10 @@ class Kmpli(private val io: Platform = Platform()) {
         // Parsed before resolveProject so that a bad --platforms value is still reported ahead
         // of a bad --name, matching the behaviour this replaced.
         val parsedPlatforms = parsePlatforms(options.platforms)
+        val buildSystem = validateBuildSystem(options.buildSystem)
         val project = resolveProject(options)
 
-        val url = buildUrl(project.name, project.packageId, parsedPlatforms, options.includeTests)
+        val url = buildUrl(project.name, project.packageId, parsedPlatforms, options.includeTests, buildSystem)
 
         io.printLine("Generating project for platform(s):")
         parsedPlatforms.forEach { io.printLine("\u2022 ${it.name}${it.ui?.let { " ($it)" } ?: ""}") }
@@ -163,6 +187,7 @@ class Kmpli(private val io: Platform = Platform()) {
                 "--pid" -> options.pid = value
                 "--template" -> options.template = value
                 "--platforms" -> options.platforms = value
+                "--build-system" -> options.buildSystem = value
                 "--include-tests" -> options.includeTests = true
                 "--help", "-h" -> options.help = true
                 "--version", "-v" -> options.version = true
@@ -179,6 +204,7 @@ class Kmpli(private val io: Platform = Platform()) {
         var template: String? = null,
         var platforms: String? = null,
         var includeTests: Boolean = false,
+        var buildSystem: String? = null,
         var help: Boolean? = null,
         var version: Boolean = false
     )
@@ -222,7 +248,13 @@ class Kmpli(private val io: Platform = Platform()) {
         }
     }
 
-    fun buildUrl(name: String, id: String, platforms: List<PlatformConfig>, tests: Boolean): String {
+    fun buildUrl(
+        name: String,
+        id: String,
+        platforms: List<PlatformConfig>,
+        tests: Boolean,
+        buildSystem: String = DEFAULT_BUILD_SYSTEM
+    ): String {
         val targets = buildJsonObject {
             platforms.forEach {
                 when (it.name) {
@@ -241,6 +273,9 @@ class Kmpli(private val io: Platform = Platform()) {
             put("template_id", JsonPrimitive("kmt"))
             put("targets", targets)
             if (tests) put("include_tests", JsonPrimitive(true))
+            // Omitted when it is the default, exactly as the wizard's serializer does, so URLs
+            // generated for Gradle projects stay byte-identical to before this flag existed.
+            if (buildSystem != DEFAULT_BUILD_SYSTEM) put("build_system", JsonPrimitive(buildSystem))
         }
 
         val encodedSpec = io.urlEncode(Json.encodeToString(spec))

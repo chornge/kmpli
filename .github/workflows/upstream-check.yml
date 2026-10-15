@@ -1,0 +1,106 @@
+name: Upstream Check
+
+# kmpli depends on two things it does not control: the project generator at
+# kmp.jetbrains.com, and the template branches in the Kotlin org's repositories. Both can
+# change on a day nothing is pushed here, so a per-PR trigger would never notice. This runs
+# on a schedule instead.
+#
+# Deliberately NOT part of build-gate: an upstream outage must never block a merge.
+on:
+  schedule:
+    # Daily, off the hour to avoid GitHub's scheduling congestion.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  upstream-check:
+    name: Upstream Check
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The amper templates returned 404 for months because nothing checked them. The URLs are
+      # read from Template.kt rather than hardcoded, so a newly added template is covered the
+      # day it lands.
+      - name: Template URLs still resolve
+        run: |
+          set -u
+          urls=$(grep -oE 'https://[^"]+\.zip' composeApp/src/commonMain/kotlin/io/chornge/kmpli/Template.kt)
+          test -n "$urls" || { echo "::error::no template URLs found in Template.kt"; exit 1; }
+
+          rc=0
+          for u in $urls; do
+            code=$(curl -s -o /dev/null -L -w "%{http_code}" --max-time 30 "$u")
+            if [ "$code" = "200" ]; then
+              echo "ok    $code  $u"
+            else
+              echo "::error::template URL returned $code: $u"
+              rc=1
+            fi
+          done
+          exit $rc
+
+      # Tests the binary users actually have, not a fresh build of main. A regression in this
+      # repository is the per-PR smoke test's job; this one is about upstream moving.
+      - name: Download the released binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+          tag=$(gh api "repos/${{ github.repository }}/releases/latest" -q .tag_name)
+          echo "testing released $tag"
+          curl -fsSL -o kmpli "https://github.com/${{ github.repository }}/releases/download/$tag/kmpli-linux-x64"
+          chmod +x kmpli
+          ./kmpli --version
+
+      - name: Platform generation still works
+        run: |
+          set -eux
+          mkdir -p work && cd work
+
+          # ios(swiftui) and server exercise the two branches that differ inside buildUrl:
+          # an explicit UI, and a target that emits an engine key rather than a ui key.
+          ../kmpli --name=UpstreamCheck --pid=org.upstream.check \
+            --platforms="android,ios(swiftui),server" --include-tests
+
+          test -d UpstreamCheck || { echo "::error::no project directory produced"; exit 1; }
+          test -n "$(ls -A UpstreamCheck)" || { echo "::error::project directory is empty"; exit 1; }
+          ls -la UpstreamCheck
+
+      # Nobody watches the Actions tab of a repository that is not being pushed to, so a
+      # scheduled failure would otherwise be silent. One issue per outage, not one per day.
+      - name: Report a failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          title="Upstream check is failing"
+          existing=$(gh issue list --state open --search "$title in:title" --json number -q '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            echo "already reported in #$existing, not commenting again"
+            exit 0
+          fi
+
+          gh issue create --title "$title" --label bug --body "$(cat <<EOF
+          The scheduled upstream check failed.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          This job verifies two things kmpli does not control:
+
+          - every template URL in \`Template.kt\` still returns 200
+          - \`--platforms\` generation still works against kmp.jetbrains.com, using the latest
+            released binary rather than a build of main
+
+          Check the run log to see which one failed. While this issue stays open the job will not
+          file another, so close it once the cause is resolved.
+          EOF
+          )"

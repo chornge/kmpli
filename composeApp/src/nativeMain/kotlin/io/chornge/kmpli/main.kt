@@ -51,6 +51,12 @@ internal fun buildArgsFromWizardResult(result: TuiWizard.WizardResult): Array<St
             if (config.ui != null) "${config.name}(${config.ui})" else config.name
         }
         argsList.add("--platforms=$platformsStr")
+
+        // Omitted at the default so the generated argument list, and the URL it produces,
+        // stay unchanged for Gradle projects.
+        if (result.buildSystem != "gradle") {
+            argsList.add("--build-system=${result.buildSystem}")
+        }
     }
 
     if (result.includeTests) {

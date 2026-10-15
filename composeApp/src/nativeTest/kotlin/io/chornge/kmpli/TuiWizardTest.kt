@@ -157,6 +157,24 @@ class TuiWizardTest {
     }
 
     @Test
+    fun wizardBuildSystem_isOmittedAtTheDefaultAndEmittedOtherwise() {
+        val platforms = listOf(TuiWizard.PlatformConfig("android", "compose"))
+
+        val gradle = buildArgsFromWizardResult(
+            TuiWizard.WizardResult("P", "org.p.app", null, platforms, true, "gradle")
+        )
+        assertTrue(gradle.none { it.startsWith("--build-system") }, gradle.joinToString(" "))
+
+        val kotlin = buildArgsFromWizardResult(
+            TuiWizard.WizardResult("P", "org.p.app", null, platforms, true, "kotlin")
+        )
+        assertTrue(kotlin.any { it == "--build-system=kotlin" }, kotlin.joinToString(" "))
+
+        // and the CLI must read back what the wizard wrote
+        assertEquals("kotlin", Kmpli(NoopPlatform()).parseArgs(kotlin).buildSystem)
+    }
+
+    @Test
     fun wizardPlatforms_omittedUiRoundTripsAsCompose() {
         val args = buildArgsFromWizardResult(
             wizardResult(platforms = listOf(TuiWizard.PlatformConfig("server", null)))

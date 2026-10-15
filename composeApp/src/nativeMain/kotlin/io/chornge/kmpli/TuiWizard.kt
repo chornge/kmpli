@@ -17,7 +17,14 @@ import platform.posix.stdout
  * Supports back navigation throughout the wizard.
  */
 class TuiWizard(
-    private val terminal: Terminal = Terminal()
+    private val terminal: Terminal = Terminal(),
+    /**
+     * Whether arrow-key navigation is available. Defaults to probing the terminal, and is
+     * injectable for the same reason [Kmpli] takes a [Platform]: the numbered-prompt fallback is
+     * real user-facing behavior on terminals without raw mode, and is otherwise unreachable in
+     * a test, because a recorder reports raw mode as supported and then never emits a key event.
+     */
+    interactive: Boolean? = null
 ) {
     // Color palette
     private val pink = brightMagenta
@@ -30,7 +37,7 @@ class TuiWizard(
 
     // Check if interactive (arrow-key) mode is available
     private val supportsInteractive: Boolean by lazy {
-        try {
+        interactive ?: try {
             terminal.enterRawMode().close()
             true
         } catch (e: Exception) {
@@ -112,7 +119,9 @@ class TuiWizard(
         val packageId: String,
         val templateId: String? = null,
         val platforms: List<PlatformConfig>? = null,
-        val includeTests: Boolean
+        val includeTests: Boolean,
+        /** Only meaningful for platform generation; templates already name their build system. */
+        val buildSystem: String = "gradle"
     )
 
     // Wizard state (persists across back navigation)
@@ -122,6 +131,7 @@ class TuiWizard(
     private var projectName: String = ""  // Empty means use default hint
     private var packageId: String = ""    // Empty means use default hint
     private var includeTests: Boolean = true
+    private var buildSystem: String = "gradle"
 
     /**
      * Run the interactive wizard and return configuration result.
@@ -195,13 +205,25 @@ class TuiWizard(
                     when (val result = promptIncludeTests()) {
                         is NavResult.Next -> {
                             includeTests = result.value
+
+                            // Platform generation only: the template ids already name their
+                            // build system, so offering the choice there would contradict it.
+                            if (!useTemplate) {
+                                when (val chosen = promptBuildSystem()) {
+                                    is NavResult.Next -> buildSystem = chosen.value
+                                    is NavResult.Back -> continue
+                                    is NavResult.Cancel -> return null
+                                }
+                            }
+
                             // Show confirmation
                             val wizardResult = WizardResult(
                                 projectName = projectName,
                                 packageId = packageId,
                                 templateId = templateId,
                                 platforms = if (useTemplate) null else selectedPlatforms,
-                                includeTests = includeTests
+                                includeTests = includeTests,
+                                buildSystem = buildSystem
                             )
                             when (promptConfirmation(wizardResult)) {
                                 is NavResult.Next -> return wizardResult
@@ -410,6 +432,23 @@ class TuiWizard(
         }
     }
 
+    private fun promptBuildSystem(): NavResult<String> {
+        terminal.println()
+        terminal.println(bold("  Build system"))
+        terminal.println()
+
+        val options = listOf(
+            "Gradle - flexible, mature plugin ecosystem",
+            "Kotlin Toolchain - declarative, easier to read"
+        )
+
+        return when (selectOne(options)) {
+            options[0] -> NavResult.Next("gradle")
+            options[1] -> NavResult.Next("kotlin")
+            else -> NavResult.Cancel
+        }
+    }
+
     private fun promptConfirmation(result: WizardResult): NavResult<Boolean> {
         terminal.println()
         terminal.println()
@@ -433,6 +472,7 @@ class TuiWizard(
                 }
                 ?: "none"
             terminal.println("  ${muted("Platforms")}   $platformsStr")
+            terminal.println("  ${muted("Build")}       ${highlight(result.buildSystem)}")
         }
 
         val testsStr = if (result.includeTests) success("yes") else warning("no")
