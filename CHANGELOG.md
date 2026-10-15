@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of `build-gate` so an upstream outage cannot block a merge (#25)
 - `kmpli-source.zip` is now listed under Manual Download in the generated release notes. It was
   already attached to every release but undocumented
+- Tests that drive the TUI wizard end to end over its numbered-prompt path, covering template
+  selection, defaults, declining tests, back navigation, cancelling, and exhausted input (#27)
+
+### Changed
+
+- `TuiWizard` takes an optional `interactive` flag, defaulting to probing the terminal exactly as
+  before. The numbered-prompt fallback is real behaviour on terminals without raw mode and was
+  otherwise unreachable in a test, because a recording terminal reports raw mode as supported and
+  then never emits a key event
 
 ### Fixed
 

@@ -17,7 +17,14 @@ import platform.posix.stdout
  * Supports back navigation throughout the wizard.
  */
 class TuiWizard(
-    private val terminal: Terminal = Terminal()
+    private val terminal: Terminal = Terminal(),
+    /**
+     * Whether arrow-key navigation is available. Defaults to probing the terminal, and is
+     * injectable for the same reason [Kmpli] takes a [Platform]: the numbered-prompt fallback is
+     * real user-facing behavior on terminals without raw mode, and is otherwise unreachable in
+     * a test, because a recorder reports raw mode as supported and then never emits a key event.
+     */
+    interactive: Boolean? = null
 ) {
     // Color palette
     private val pink = brightMagenta
@@ -30,7 +37,7 @@ class TuiWizard(
 
     // Check if interactive (arrow-key) mode is available
     private val supportsInteractive: Boolean by lazy {
-        try {
+        interactive ?: try {
             terminal.enterRawMode().close()
             true
         } catch (e: Exception) {
