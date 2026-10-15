@@ -301,6 +301,15 @@ jobs:
           test -n "$(ls -A SmokePlatforms)" || { echo "::error::generated directory is empty"; exit 1; }
           ls -la SmokePlatforms
 
+          # The Kotlin Toolchain spec is a different shape from the Gradle one, so assert it
+          # really produced a declarative project rather than silently falling back to Gradle.
+          "$bin" --name=SmokeToolchain --pid=org.smoke.toolchain \
+            --platforms="android,ios" --build-system=kotlin
+
+          test -d SmokeToolchain || { echo "::error::toolchain generation produced no directory"; exit 1; }
+          find SmokeToolchain -name 'module.yaml' -o -name 'project.yaml' | grep -q . \
+            || { echo "::error::no declarative build files; did it fall back to Gradle?"; exit 1; }
+
       # Linking can succeed while producing the wrong architecture, so check explicitly.
       - name: Verify aarch64 Binary
         if: matrix.target == 'LinuxArm64'

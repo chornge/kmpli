@@ -317,6 +317,50 @@ class KmpliTest {
         assertTrue(message.contains("NAME(UI)"), message)
     }
 
+    // --- build system ----------------------------------------------------------------
+    // "gradle" and "kotlin" are the serial values of the wizard's BuildSystem enum, so the flag
+    // cannot drift from the API it feeds.
+
+    @Test
+    fun testBuildSystem_defaultsToGradleWhenAbsent() {
+        assertEquals("gradle", cli.validateBuildSystem(null))
+        assertEquals("gradle", cli.validateBuildSystem(""))
+    }
+
+    @Test
+    fun testBuildSystem_acceptsBothValuesCaseInsensitively() {
+        assertEquals("kotlin", cli.validateBuildSystem("kotlin"))
+        assertEquals("kotlin", cli.validateBuildSystem("KOTLIN"))
+        assertEquals("gradle", cli.validateBuildSystem("Gradle"))
+    }
+
+    @Test
+    fun testBuildSystem_rejectsAnythingElse() {
+        val message = assertFailsWith<InvalidInputException> {
+            cli.validateBuildSystem("maven")
+        }.message!!
+        assertTrue(message.contains("'maven'"), message)
+        assertTrue(message.contains("gradle, kotlin"), message)
+    }
+
+    // The wizard omits build_system when it equals the default, so a Gradle URL must stay exactly
+    // as it was before this flag existed.
+    @Test
+    fun testBuildUrl_omitsBuildSystemForGradle() {
+        val platforms = cli.parsePlatforms("android")
+        val default = cli.buildUrl("Foo", "org.foo", platforms, false)
+        val explicit = cli.buildUrl("Foo", "org.foo", platforms, false, "gradle")
+        assertEquals(default, explicit)
+        assertFalse(default.contains("build_system"), default)
+    }
+
+    @Test
+    fun testBuildUrl_emitsBuildSystemForKotlin() {
+        val url = cli.buildUrl("Foo", "org.foo", cli.parsePlatforms("android"), false, "kotlin")
+        assertTrue(url.contains("build_system"), url)
+        assertTrue(url.contains("kotlin"), url)
+    }
+
     // --- url building ---------------------------------------------------------------
     // Project names may contain spaces, so the name and package id must be encoded or
     // the generated request is malformed.

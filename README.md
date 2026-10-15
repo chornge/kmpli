@@ -233,6 +233,10 @@ kmpli --name="CMPProject" --pid="org.cmp.project"
                       desktop   compose (default)
                       web       compose (default), react
                       server    always uses the ktor engine; any UI is ignored
+  --build-system    Build system for --platforms generation.
+                    gradle (default) or kotlin for the Kotlin Toolchain.
+                    Ignored with --template, since each template id already
+                    names its build system.
   --include-tests   Include sample tests (optional)
   --help, -h        Show this help message
   --version, -v     Show the installed kmpli version
@@ -262,6 +266,12 @@ To generate a template project. Shared UI or Native UI or Barebones KMP library.
 kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui"
 kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui"
 kmpli --name="CMPProject" --pid="org.cmp.project" --template="library"
+```
+
+To generate platforms with the Kotlin Toolchain instead of Gradle:
+
+```bash
+kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="android,ios" --build-system="kotlin"
 ```
 
 To generate a template configured with the Kotlin Toolchain rather than Gradle (available for

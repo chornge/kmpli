@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already attached to every release but undocumented
 - Tests that drive the TUI wizard end to end over its numbered-prompt path, covering template
   selection, defaults, declining tests, back navigation, cancelling, and exhausted input (#27)
+- `--build-system` for `--platforms` generation, accepting `gradle` (the default) or `kotlin` for
+  the Kotlin Toolchain. The wizard offers the same choice when generating from platforms. It has
+  no effect with `--template`, since each template id already names its build system (#35)
 
 ### Changed
 
