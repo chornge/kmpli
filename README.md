@@ -25,6 +25,9 @@ cannot:
 
 ### Quick Start
 
+kmpli needs curl and its SSL libraries at runtime. Most systems already have them; see
+[Prerequisites](#installation) if the steps below fail with a TLS error.
+
 ```bash
 # macOS/Linux
 curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
@@ -56,14 +59,15 @@ from an x86_64 host, because Kotlin/Native publishes no linux-aarch64 host compi
 
 **Prerequisites (Required)**
 
-Before installing kmpli, you **must** install OpenSSL and curl for SSL/TLS support:
+kmpli needs curl and its SSL libraries present at runtime. These are the runtime packages, not
+the development ones; the `-dev` packages are only needed to build from source.
 
 ```bash
 # macOS
 brew install curl openssl
 
-# Linux (Debian/Ubuntu)
-sudo apt-get install -y ca-certificates curl libcurl4-openssl-dev libssl-dev
+# Linux (Debian/Ubuntu) - libcurl comes with curl
+sudo apt-get install -y ca-certificates curl
 
 # Windows (Scoop)
 scoop install curl openssl
@@ -164,12 +168,13 @@ A `Makefile` wraps the common tasks for whichever platform you are on. Run `make
 | Target | What it does |
 | --- | --- |
 | `make build` | Assemble and check the host target, running its tests too |
-| `make test` | Run only the host target's unit tests |
+| `make test` | Run the unit tests (`./gradlew allTests`, exactly as CI does) |
+| `make lint` | Run detekt static analysis |
 | `make release` | Link the optimized release binary |
 | `make install` | Build the release binary and copy it to the install directory |
 | `make uninstall` | Remove kmpli installed by any supported method |
 | `make clean` | Delete Gradle build outputs |
-| `make sanity` | Run clean, then test, then build |
+| `make sanity` | Run clean, lint, test, then build, in that order |
 
 Then run the installer as shown above. The launcher prefers a locally built binary over downloading
 one, but it looks for that binary at a path relative to the current directory, so you only get the
@@ -288,8 +293,8 @@ This means your system is missing SSL certificates or curl cannot find them.
    # macOS
    brew install openssl curl
 
-   # Linux (Debian/Ubuntu)
-   sudo apt-get install -y ca-certificates curl libcurl4-openssl-dev libssl-dev
+   # Linux (Debian/Ubuntu) - ca-certificates is the one that matters here
+   sudo apt-get install -y ca-certificates curl
 
    # Windows (Scoop)
    scoop install curl openssl
