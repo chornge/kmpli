@@ -103,7 +103,9 @@ actual fun Platform(): Platform = object : Platform {
                 )
             }
         } else {
-            system("unzip -o \"$tmpZip\" -d .")
+            // -q to match the Windows branch: bsdtar and Expand-Archive are both silent,
+            // so without it Unix users get a 50-line file dump that Windows users do not.
+            system("unzip -q -o \"$tmpZip\" -d .")
         }
         if (exitCode != 0) {
             FileSystem.SYSTEM.delete(tmpZip.toPath())
@@ -112,20 +114,19 @@ actual fun Platform(): Platform = object : Platform {
 
         FileSystem.SYSTEM.delete(tmpZip.toPath())
 
-        // Detect the actual extracted folder (e.g. "KMP-App-Template-main", "multiplatform-library-template-main")
-        val extractedFolder = FileSystem.SYSTEM.list("./".toPath()).firstOrNull {
-            it.name != projectName && (
-                it.name.contains("KMP-App-Template") ||
-                it.name.contains("multiplatform-library-template")
-            )
-        }
-
-        if (extractedFolder == null) {
-            error("Extraction produced no recognizable project folder for $projectName")
-        }
-
-        // Rename/move to intended project name
+        // Two archive shapes arrive here. kmp.jetbrains.com returns a zip already rooted at the
+        // project name, so there is nothing to rename and targetPath already exists. The template
+        // repositories return "<repo>-<branch>", which has to be moved into place. Only the second
+        // case needs a folder to locate, so look for one only when the target is absent. Treating
+        // a missing folder as an error unconditionally breaks platform generation.
         if (!FileSystem.SYSTEM.exists(targetPath)) {
+            val extractedFolder = FileSystem.SYSTEM.list("./".toPath()).firstOrNull {
+                it.name != projectName && (
+                    it.name.contains("KMP-App-Template") ||
+                    it.name.contains("multiplatform-library-template")
+                )
+            } ?: error("Extraction produced no project folder for $projectName")
+
             FileSystem.SYSTEM.atomicMove(extractedFolder, targetPath)
             printLine("Renamed ${extractedFolder.name} -> ${targetPath.name}")
         }

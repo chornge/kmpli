@@ -5,9 +5,39 @@
 
 Pronounced `"Comply"`
 
-A command-line interface (CLI) designed to streamline the creation of new Kotlin/Compose Multiplatform
-projects. It offers a flexible way to generate customized project configurations and directory structures, including
-configuring with Amper, and test setups.
+Generate Kotlin and Compose Multiplatform projects from your terminal. No IDE, no browser, and no
+JVM needed to run it.
+
+<p align="center">
+  <img src="docs/demo.gif" alt="The kmpli interactive wizard generating a project" width="813">
+</p>
+
+### Why a CLI
+
+[kmp.jetbrains.com](https://kmp.jetbrains.com) is the usual way to start a Kotlin Multiplatform
+project, and it works well for a person clicking through it once. kmpli covers what a web form
+cannot:
+
+- **Scripting and CI.** Generate a project inside a pipeline, a Makefile, or a setup script.
+- **Reproducible scaffolding.** The same flags produce the same project every time, so a team can
+  commit the command instead of documenting a sequence of clicks.
+- **Staying in the terminal.** An interactive wizard when you want one, flags when you do not.
+
+### Quick Start
+
+```bash
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+
+kmpli
+```
+
+Running `kmpli` with no arguments opens the wizard shown above. Or skip it entirely:
+
+```bash
+kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios(swiftui),desktop"
+kmpli --name="MyLib" --pid="com.acme.mylib" --template="library"
+```
 
 ### Supported Platforms
 
@@ -188,8 +218,8 @@ kmpli --name="CMPProject" --pid="org.cmp.project"
                     shared-ui -> Shared UI App (Compose)
                     native-ui -> Native UI App (Compose + SwiftUI)
                     library -> Bare-bones Multiplatform Library
-                    shared-ui-amper -> Shared UI App (configured with Amper)
-                    native-ui-amper -> Native UI App (configured with Amper)
+                    shared-ui-toolchain -> Shared UI App (Kotlin Toolchain)
+                    native-ui-toolchain -> Native UI App (Kotlin Toolchain)
   --platforms TEXT  Target platform(s). Optional, defaults to
                     "android(compose),ios(compose)". Comma-separated, each entry
                     written as NAME or NAME(UI):
@@ -229,11 +259,12 @@ kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui"
 kmpli --name="CMPProject" --pid="org.cmp.project" --template="library"
 ```
 
-To generate a template configured with Amper (only available with Shared UI or Native UI). Pick one:
+To generate a template configured with the Kotlin Toolchain rather than Gradle (available for
+Shared UI and Native UI). Pick one:
 
 ```
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui-amper"
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui-amper"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui-toolchain"
+kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui-toolchain"
 ```
 
 ### Troubleshooting

@@ -40,13 +40,13 @@ class TuiWizardTest {
         assertNull(TuiWizard.resolveTemplateId("✓ Done"))
     }
 
-    /** shared-ui is a prefix of shared-ui-amper; exact matching must not conflate them. */
+    /** shared-ui is a prefix of shared-ui-toolchain; exact matching must not conflate them. */
     @Test
     fun resolveTemplateId_distinguishesPrefixOverlappingIds() {
         val shorter = TuiWizard.TEMPLATES.first { it.id == "shared-ui" }
-        val longer = TuiWizard.TEMPLATES.first { it.id == "shared-ui-amper" }
+        val longer = TuiWizard.TEMPLATES.first { it.id == "shared-ui-toolchain" }
         assertEquals("shared-ui", TuiWizard.resolveTemplateId(TuiWizard.templateLabel(shorter)))
-        assertEquals("shared-ui-amper", TuiWizard.resolveTemplateId(TuiWizard.templateLabel(longer)))
+        assertEquals("shared-ui-toolchain", TuiWizard.resolveTemplateId(TuiWizard.templateLabel(longer)))
     }
 
     /**

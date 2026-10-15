@@ -50,8 +50,8 @@ class TuiWizard(
             TemplateOption("shared-ui", "Shared Compose UI across all platforms"),
             TemplateOption("native-ui", "Compose + SwiftUI for native iOS feel"),
             TemplateOption("library", "Minimal multiplatform library setup"),
-            TemplateOption("shared-ui-amper", "Shared UI with Amper build system"),
-            TemplateOption("native-ui-amper", "Native UI with Amper build system")
+            TemplateOption("shared-ui-toolchain", "Shared UI with the Kotlin Toolchain"),
+            TemplateOption("native-ui-toolchain", "Native UI with the Kotlin Toolchain")
         )
 
         private val PLATFORMS = listOf(

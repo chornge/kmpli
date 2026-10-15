@@ -23,22 +23,25 @@ sealed class Template(
         oldPackageId = "io.github.kotlin.fibonacci"
     )
 
-    object SharedUiAmper : Template(
-        id = "shared-ui-amper",
-        description = "Shared UI App (configured with Amper)",
-        url = "https://github.com/Kotlin/KMP-App-Template/archive/refs/heads/amper.zip",
+    // JetBrains replaced Amper with the Kotlin Toolchain in the Multiplatform Wizard, and the
+    // upstream "amper" branches were removed. The declarative module.yaml/project.yaml layout
+    // carried over, so these are the direct successors.
+    object SharedUiToolchain : Template(
+        id = "shared-ui-toolchain",
+        description = "Shared UI App (configured with Kotlin Toolchain)",
+        url = "https://github.com/Kotlin/KMP-App-Template/archive/refs/heads/kotlin-toolchain.zip",
         oldPackageId = "com.jetbrains.kmpapp"
     )
 
-    object NativeUiAmper : Template(
-        id = "native-ui-amper",
-        description = "Native UI App (configured with Amper)",
-        url = "https://github.com/Kotlin/KMP-App-Template-Native/archive/refs/heads/amper.zip",
+    object NativeUiToolchain : Template(
+        id = "native-ui-toolchain",
+        description = "Native UI App (configured with Kotlin Toolchain)",
+        url = "https://github.com/Kotlin/KMP-App-Template-Native/archive/refs/heads/kotlin-toolchain.zip",
         oldPackageId = "com.jetbrains.kmpapp"
     )
 
     companion object Companion {
-        fun fromId(id: String) = listOf(SharedUi, NativeUi, Library, SharedUiAmper, NativeUiAmper).find {
+        fun fromId(id: String) = listOf(SharedUi, NativeUi, Library, SharedUiToolchain, NativeUiToolchain).find {
             it.id.equals(
                 id,
                 ignoreCase = true
@@ -46,6 +49,6 @@ sealed class Template(
         }
 
         fun availableTemplates() =
-            listOf(SharedUi, NativeUi, Library, SharedUiAmper, NativeUiAmper).joinToString(", ") { it.id }
+            listOf(SharedUi, NativeUi, Library, SharedUiToolchain, NativeUiToolchain).joinToString(", ") { it.id }
     }
 }
