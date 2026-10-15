@@ -278,6 +278,29 @@ jobs:
           test -d SmokeTest || { echo "::error::generation produced no SmokeTest directory"; exit 1; }
           ls -la
 
+      # --platforms is a materially different path from --template, not just a different URL.
+      # kmp.jetbrains.com returns a zip already rooted at the project name, whereas the template
+      # repositories return "<repo>-<branch>", so extraction handles the two differently. A
+      # regression in exactly that difference shipped in v1.5.0 because only --template was
+      # covered here. One platform only, to keep this to a single request per push against a
+      # third-party service.
+      - name: Smoke Test (platform generation)
+        if: matrix.target == 'LinuxX64'
+        shell: bash
+        run: |
+          set -eux
+          bin="$PWD/${{ matrix.binary_path }}"
+          rm -rf smoke-platforms && mkdir smoke-platforms && cd smoke-platforms
+
+          # ios(swiftui) and server exercise the two branches that differ inside buildUrl:
+          # an explicit UI, and a target that emits an engine key rather than a ui key.
+          "$bin" --name=SmokePlatforms --pid=org.smoke.platforms \
+            --platforms="android,ios(swiftui),server" --include-tests
+
+          test -d SmokePlatforms || { echo "::error::platform generation produced no directory"; exit 1; }
+          test -n "$(ls -A SmokePlatforms)" || { echo "::error::generated directory is empty"; exit 1; }
+          ls -la SmokePlatforms
+
       # Linking can succeed while producing the wrong architecture, so check explicitly.
       - name: Verify aarch64 Binary
         if: matrix.target == 'LinuxArm64'
