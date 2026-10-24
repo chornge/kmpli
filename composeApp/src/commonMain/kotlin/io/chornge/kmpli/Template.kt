@@ -1,3 +1,9 @@
+// Template archives are fetched from codeload.github.com rather than the more familiar
+// github.com/<owner>/<repo>/archive/refs/heads/<branch>.zip form. The github.com URL answers
+// with a redirect carrying a content-security-policy header around 9 KB, which is larger than
+// the curl engine's per-header line limit, so every --template run failed with "Header line
+// length limit exceeded". codeload is the host that redirect points at; it serves the same
+// archive, rooted at the same "<repo>-<branch>" folder, with headers under 100 bytes.
 sealed class Template(
     val id: String,
     val description: String,
@@ -6,20 +12,20 @@ sealed class Template(
 ) {
     object SharedUi : Template(
         "shared-ui", "Shared UI App (Compose)",
-        "https://github.com/Kotlin/KMP-App-Template/archive/refs/heads/main.zip",
+        "https://codeload.github.com/Kotlin/KMP-App-Template/zip/refs/heads/main",
         "com.jetbrains.kmpapp"
     )
 
     object NativeUi : Template(
         "native-ui", "Native UI App (Compose + SwiftUI)",
-        "https://github.com/Kotlin/KMP-App-Template-Native/archive/refs/heads/main.zip",
+        "https://codeload.github.com/Kotlin/KMP-App-Template-Native/zip/refs/heads/main",
         "com.jetbrains.kmpapp"
     )
 
     object Library : Template(
         id = "library",
         description = "Bare-bones Multiplatform Library",
-        url = "https://github.com/Kotlin/multiplatform-library-template/archive/refs/heads/main.zip",
+        url = "https://codeload.github.com/Kotlin/multiplatform-library-template/zip/refs/heads/main",
         oldPackageId = "io.github.kotlin.fibonacci"
     )
 
@@ -29,14 +35,14 @@ sealed class Template(
     object SharedUiToolchain : Template(
         id = "shared-ui-toolchain",
         description = "Shared UI App (configured with Kotlin Toolchain)",
-        url = "https://github.com/Kotlin/KMP-App-Template/archive/refs/heads/kotlin-toolchain.zip",
+        url = "https://codeload.github.com/Kotlin/KMP-App-Template/zip/refs/heads/kotlin-toolchain",
         oldPackageId = "com.jetbrains.kmpapp"
     )
 
     object NativeUiToolchain : Template(
         id = "native-ui-toolchain",
         description = "Native UI App (configured with Kotlin Toolchain)",
-        url = "https://github.com/Kotlin/KMP-App-Template-Native/archive/refs/heads/kotlin-toolchain.zip",
+        url = "https://codeload.github.com/Kotlin/KMP-App-Template-Native/zip/refs/heads/kotlin-toolchain",
         oldPackageId = "com.jetbrains.kmpapp"
     )
 
