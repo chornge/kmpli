@@ -22,7 +22,7 @@ cannot:
 - **Scripting and CI.** Generate a project inside a pipeline, a Makefile, or a setup script.
 - **Reproducible scaffolding.** The same flags produce the same project every time, so a team can
   commit the command instead of documenting a sequence of clicks.
-- **Staying in the terminal.** An interactive wizard when you want one, flags when you do not.
+- **Staying in the terminal.** An interactive wizard is also available.
 
 ### Quick Start
 
