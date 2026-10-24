@@ -83,8 +83,8 @@ kotlin {
 
         // linux_arm64 has no Kotlin/Native host compiler of its own, so the aarch64 binary is
         // cross-compiled from the linux_x64 host. Kotlin downloads the aarch64 gcc toolchain and
-        // sysroot automatically, but that sysroot carries no libcurl, so the CI job installs the
-        // arm64 libcurl packages and the linker is pointed at them below.
+        // sysroot automatically; the CI job adds zlib1g-dev:arm64 so that -lz can resolve, and
+        // the linker is pointed at the multiarch directory below.
         KonanTarget.LINUX_X64 -> {
             linuxX64("linuxX64") {
                 binaries.executable {
@@ -108,18 +108,19 @@ kotlin {
                     // them at runtime, so that check has to be relaxed for this cross-link.
                     linkerOpts("--allow-shlib-undefined")
 
-                    // libcurl's full static closure, from `pkg-config --libs --static libcurl`
-                    // against the arm64 .pc file. Needed because ktor force-includes a static
-                    // libcurl.a whose members call into libssh, GSSAPI and OpenSSL. Passed in
-                    // rather than hardcoded so it cannot drift from the installed package.
-                    val extra = providers
-                        .environmentVariable("KMPLI_LINUX_ARM64_LINKER_OPTS")
-                        .orNull
-                        .orEmpty()
-                        .split(" ")
-                        .filter { it.isNotBlank() }
-
-                    if (extra.isNotEmpty()) linkerOpts(extra)
+                    // No library list belongs here. ktor's linux_arm64 klib bundles prebuilt
+                    // libcurl.a, libssl.a and libcrypto.a, and its manifest declares
+                    // "linkerOpts.linux=-lz", so zlib is the only external library the link
+                    // wants and the klib already asks for it.
+                    //
+                    // ktor 3.0.1 bundled libcurl.a on its own, built with SSH, LDAP and RTMP
+                    // support, leaving those symbols undefined and forcing the whole
+                    // `pkg-config --libs --static libcurl` closure through this block. That
+                    // closure also put every library in it into the binary's DT_NEEDED list,
+                    // libssh.so.4 among them, which Debian does not ship because it satisfies
+                    // libcurl with libssh2 instead. The published aarch64 binary therefore
+                    // would not start on Debian at all. If a future ktor makes extra linker
+                    // input necessary again, check `readelf -d` on the result before shipping.
                 }
             }
         }
@@ -135,6 +136,14 @@ kotlin {
             binaries.executable {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
+
+                // ktor's mingw_x64 klib bundles libcurl.a, libssl.a, libcrypto.a and libz.a but,
+                // unlike its linux and osx entries, declares no linkerOpts of its own. Those
+                // archives call into the Windows crypto and socket APIs: 27 Cert*/Crypt* symbols
+                // need crypt32, and 16 WSA*/socket symbols need ws2_32. ktor 3.0.1 shipped these
+                // in its klib manifest; 3.3.3 does not, so they belong here instead. Harmless if
+                // a future Kotlin/Native or ktor starts supplying them again.
+                linkerOpts("-lcrypt32", "-lws2_32")
             }
         }
 
