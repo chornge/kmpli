@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `--template` generation worked for no template at all. github.com answers the
+  `archive/refs/heads/<branch>.zip` redirect with a `content-security-policy` header of roughly
+  9 KB, past the curl engine's per-header line limit, so every run failed with "Header line length
+  limit exceeded" while the URLs themselves still returned 200. All five templates now download
+  from codeload.github.com, the host that redirect points at, which serves the same archive rooted
+  at the same folder with headers under 100 bytes
+- The `linux-arm64` binary could not start on Debian. ktor 3.0.1 bundled a static `libcurl.a` built
+  with SSH support, so the binary referenced `libssh.so.4` directly, and Debian satisfies libcurl
+  with libssh2 and ships no such library. The aarch64 binary wanted 24 shared libraries where
+  x86_64 wanted 11, and 13 of those came from a linker closure it should never have carried
+- The container recipe under Troubleshooting could not work as written. `install.sh` installs with
+  `sudo`, which slim images do not ship, `unzip` was missing from the install list, and without
+  `set -e` the trailing `chown` made the whole recipe exit 0 having generated nothing
+
+### Changed
+
+- ktor 3.0.1 to 3.3.3. Its klib bundles libcurl, OpenSSL and their closure and declares its own
+  `linkerOpts.linux=-lz`, which removes the `pkg-config --libs --static libcurl` closure, the
+  static-`libgcc.a` outline-atomics hack, and eleven of the twelve arm64 cross-compilation
+  packages from both workflows. On macOS the binary no longer links Homebrew's libcurl at all
+- `unzip` is now documented as a runtime dependency on macOS and Linux. kmpli has always shelled
+  out to it to unpack the generated project, and this was never stated
+
+### Added
+
+- `Smoke Test (minimal container)` in `build.yml` for both Linux targets, running the binary in
+  `debian:stable-slim` with only the documented prerequisites installed. Runner images carry a
+  broad package set, so the other smoke tests can pass with a binary that would not start on a
+  user's machine, which is how the `libssh.so.4` gap went unnoticed
+- `Verify aarch64 Binary` now fails the build if libssh, LDAP, RTMP or GSSAPI reappear in the
+  binary's `DT_NEEDED` entries
+- `Template generation still works` in the daily `Upstream Check`, covering every template in
+  `Template.kt`. The existing check proved the archives were reachable, which is not the same as
+  kmpli being able to consume them, and that gap is what hid the header-limit failure for a week
+
 ## [1.6.1] - 2026-10-15
 
 ### Added
