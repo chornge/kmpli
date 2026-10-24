@@ -63,12 +63,16 @@ from an x86_64 host, because Kotlin/Native publishes no linux-aarch64 host compi
 kmpli needs curl and its SSL libraries present at runtime. These are the runtime packages, not
 the development ones; the `-dev` packages are only needed to build from source.
 
+On macOS and Linux it also shells out to `unzip` to unpack the generated project. macOS ships it
+and most Linux installs have it, but minimal container images usually do not. Windows uses the
+bundled `tar.exe`, or PowerShell as a fallback, so it needs nothing extra.
+
 ```bash
 # macOS
 brew install curl openssl
 
 # Linux (Debian/Ubuntu) - libcurl comes with curl
-sudo apt-get install -y ca-certificates curl
+sudo apt-get install -y ca-certificates curl unzip
 
 # Windows (Scoop)
 scoop install curl openssl
@@ -342,6 +346,26 @@ This means your system is missing SSL certificates or curl cannot find them.
    Do not try to `brew link openssl`. The formula is named `openssl@3`, and it is keg-only, so
    Homebrew leaves it unlinked deliberately and the link will fail.
 
+#### Linux aarch64: `libssh.so.4` not found (v1.6.1 and earlier)
+
+On a clean Debian aarch64 system the arm64 binary refuses to start:
+
+```
+kmpli: error while loading shared libraries: libssh.so.4: cannot open shared object file
+```
+
+Either upgrade kmpli, or install libssh:
+
+```sh
+sudo apt-get install -y libssh-4
+```
+
+Only the aarch64 binary was affected, and only up to v1.6.1. Those builds linked a libcurl built
+with SSH support, so the binary asked for `libssh.so.4` directly. Debian satisfies libcurl with
+libssh2 and ships no `libssh.so.4`, while Ubuntu builds libcurl against libssh and normally
+already has it, which is why the same binary ran on one and not the other. Later builds bundle
+libcurl without SSH support and no longer reference it.
+
 #### Alpine, or any other musl-based distribution
 
 kmpli's Linux binaries are linked against glibc and **cannot run on musl systems** such as Alpine.
@@ -367,8 +391,10 @@ directory:
 
 ```sh
 docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '
-  apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
-  curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+  set -e
+  apt-get update -qq && apt-get install -y -qq curl ca-certificates unzip >/dev/null
+  curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/kmpli -o /usr/local/bin/kmpli
+  chmod +x /usr/local/bin/kmpli
   kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
   chown -R '"$(id -u):$(id -g)"' /out
 '
@@ -377,6 +403,15 @@ docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '
 The final `chown` matters. Everything inside the container runs as root, so without it the
 generated project would be owned by root on your host. The `$(id -u)` and `$(id -g)` expand on
 your machine, not inside the container.
+
+Three other details are easy to get wrong. `unzip` has to be in the install list, because kmpli
+shells out to it. The launcher is fetched directly rather than piped through `install.sh`,
+because that script installs with `sudo`, which slim images do not ship. And `set -e` is what
+makes a failure visible at all: without it the trailing `chown` succeeds regardless, so the
+container exits 0 having generated nothing.
+
+On aarch64, add `libssh-4` to the install list if you are running v1.6.1 or earlier, for the
+reason given in the `libssh.so.4` section above.
 
 Alpine's `gcompat` package provides a glibc compatibility layer and may be enough to run the
 binary directly, but this is untested against kmpli.
