@@ -7,6 +7,15 @@ obvious.
 
 This writes them all down.
 
+> **Status note.** This describes the ktor 3.0.1 era, when ktor's `linux_arm64` klib bundled a
+> static `libcurl.a` built with SSH, LDAP and RTMP support and nothing else. Layers 3 and 5, the
+> `pkg-config --libs --static libcurl` closure and the static-`libgcc.a` hack, have since been
+> removed from the build. ktor 3.3.3 bundles libcurl, OpenSSL and their closure, and declares
+> `linkerOpts.linux=-lz` in its own klib manifest, so the cross-link now needs nothing but
+> `zlib1g-dev:arm64`. The debugging narrative is kept because the techniques still apply, but do
+> not copy the build snippets as current configuration. One conclusion below turned out to be
+> wrong in a way that shipped a broken binary; see the end of "One last check worth doing".
+
 ## The thing that stops you immediately
 
 The obvious plan is to build aarch64 on an aarch64 machine. GitHub even provides free arm64 Linux
@@ -225,6 +234,23 @@ libcurl4t64 Depends: libbrotli1, libgssapi-krb5-2, libidn2-0, libldap2, libnghtt
 
 Every extra library is already a dependency of libcurl itself. Anything with libcurl installed has
 all of them. The difference is cosmetic.
+
+**That conclusion was wrong, and it is why a broken binary shipped.** The `Depends` line above is
+Ubuntu's `libcurl4t64`. Debian builds libcurl against **libssh2** instead, so a Debian aarch64
+system with libcurl fully installed still has no `libssh.so.4`, and the binary does not start:
+
+```
+kmpli: error while loading shared libraries: libssh.so.4: cannot open shared object file
+```
+
+Nothing caught it, because the only machine that ever ran the aarch64 binary was GitHub's
+`ubuntu-24.04-arm` runner, which has Ubuntu's closure preinstalled.
+
+Two lessons. Borrowing a distribution's dependency list only tells you about that distribution.
+And "it runs on the CI runner" is a weaker claim than "it runs on a clean system", because runner
+images are too well equipped to prove anything about a user's machine. The check that would have
+caught this is running the binary inside `debian:stable-slim` with only the documented
+prerequisites installed, which `build.yml` now does for both Linux targets.
 
 ## Takeaways
 

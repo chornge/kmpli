@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `--template` generation worked for no template at all. github.com answers the
+  `archive/refs/heads/<branch>.zip` redirect with a `content-security-policy` header of roughly
+  9 KB, past the curl engine's per-header line limit, so every run failed with "Header line length
+  limit exceeded" while the URLs themselves still returned 200. All five templates now download
+  from codeload.github.com, the host that redirect points at, which serves the same archive rooted
+  at the same folder with headers under 100 bytes
+- The `linux-arm64` binary could not start on Debian. ktor 3.0.1 bundled a static `libcurl.a` built
+  with SSH support, so the binary referenced `libssh.so.4` directly, and Debian satisfies libcurl
+  with libssh2 and ships no such library. The aarch64 binary wanted 24 shared libraries where
+  x86_64 wanted 11, and 13 of those came from a linker closure it should never have carried
+- Every HTTPS request failed on Linux with "SSL peer certificate or SSH remote key was not OK",
+  once curl and TLS became statically linked. The bundled OpenSSL's `OPENSSLDIR` is `/etc/ssl`, so
+  the CA file it looks for is `/etc/ssl/cert.pem`, which Debian and Ubuntu never create; they ship
+  `/etc/ssl/certs/ca-certificates.crt` and a hashed `/etc/ssl/certs` directory. That curl is also
+  built without a CA fallback, so it did not consult OpenSSL's default verify paths either, and
+  verification failed even with `ca-certificates` installed. kmpli now locates the store itself,
+  checking the five standard bundle paths and falling back to the hashed directory, with
+  `CURL_CA_BUNDLE` and `SSL_CERT_FILE` taking precedence. Linux only: macOS and Windows read the
+  OS trust store through `Security.framework` and Schannel
+- The container recipe under Troubleshooting could not work as written. `install.sh` installs with
+  `sudo`, which slim images do not ship, `unzip` was missing from the install list, and without
+  `set -e` the trailing `chown` made the whole recipe exit 0 having generated nothing
+
+### Changed
+
+- ktor 3.0.1 to 3.3.3 on macOS and Linux. Its klib bundles libcurl, OpenSSL and their closure
+  and declares its own `linkerOpts.linux=-lz`, which removes the `pkg-config --libs --static
+  libcurl` closure, the static-`libgcc.a` outline-atomics hack, and eleven of the twelve arm64
+  cross-compilation packages from both workflows. On macOS the binary no longer links Homebrew's
+  libcurl at all, reaching the system trust store through `Security.framework` instead
+- Windows stays on ktor 3.0.1, selected by host in `composeApp/build.gradle.kts`. ktor 3.1.0
+  replaced the mingw curl build's Schannel backend with a bundled static OpenSSL, which looks for
+  its CA store at a path compiled in at build time that does not exist on Windows, so every HTTPS
+  request fails verification regardless of what is installed. ktor's Curl engine exposes only
+  `sslVerify`, `caInfo` and `caPath`, with no way to reach `CURLSSLOPT_NATIVE_CA`, so the Windows
+  certificate store cannot be selected from the build. One target is configured per host, so the
+  two versions never meet in a single compilation
+- `unzip` is now documented as a runtime dependency on macOS and Linux. kmpli has always shelled
+  out to it to unpack the generated project, and this was never stated
+- curl and OpenSSL are no longer runtime requirements. Both are linked statically, so the Linux
+  binary's only non-glibc dependency is zlib and the macOS binary's is `Security.framework`. curl
+  is still needed for the installer script, which downloads the binary with it. The prerequisites
+  and the SSL/TLS troubleshooting section were rewritten accordingly, and building from source on
+  Linux now wants `zlib1g-dev` rather than `libcurl4-openssl-dev` and `libssl-dev`
+- The TLS error message no longer tells users to install OpenSSL and libcurl development packages,
+  which cannot help when both are statically linked. It now points at `ca-certificates` on Linux
+  and notes that a failure on macOS or Windows suggests TLS interception instead
+
+### Added
+
+- `Smoke Test (minimal container)` in `build.yml` for both Linux targets, running the binary in
+  `debian:stable-slim` with only the documented prerequisites installed. Runner images carry a
+  broad package set, so the other smoke tests can pass with a binary that would not start on a
+  user's machine, which is how the `libssh.so.4` gap went unnoticed
+- `Verify aarch64 Binary` now fails the build if libssh, LDAP, RTMP or GSSAPI reappear in the
+  binary's `DT_NEEDED` entries
+- Alpine is now a documented and tested target, on x86_64 and aarch64 alike. The README said the Linux binaries
+  "cannot run on musl systems" and that Alpine's `gcompat` was "untested against kmpli"; both
+  were wrong. `apk add gcompat libgcc ca-certificates` is enough to run kmpli directly, verified
+  on `alpine:latest` x86_64 for `--template` and `--platforms` alike, and the container smoke
+  test now covers it on every push so the claim cannot rot. Nothing else is needed, because zlib
+  and a BusyBox `unzip` are already in the base image
+- aarch64 musl now works, where it did not before. musl's loader rejected the v1.6.1 aarch64
+  binary with "Not a valid dynamic program"; the current build loads and generates fine, the
+  difference being that it needs nothing beyond zlib and glibc where that one carried libcurl's
+  entire closure in `DT_NEEDED`. Both architectures are gated by a musl container step
+- `Template generation still works` in the daily `Upstream Check`, covering every template in
+  `Template.kt`. The existing check proved the archives were reachable, which is not the same as
+  kmpli being able to consume them, and that gap is what hid the header-limit failure for a week
+
 ## [1.6.1] - 2026-10-15
 
 ### Added

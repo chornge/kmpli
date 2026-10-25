@@ -31,7 +31,9 @@ jobs:
       - name: Template URLs still resolve
         run: |
           set -u
-          urls=$(grep -oE 'https://[^"]+\.zip' composeApp/src/commonMain/kotlin/io/chornge/kmpli/Template.kt)
+          # Not anchored on a .zip suffix: the codeload URLs end in the branch name instead.
+          # Template.kt holds no URLs other than the template archives.
+          urls=$(grep -oE 'https://[^"]+' composeApp/src/commonMain/kotlin/io/chornge/kmpli/Template.kt)
           test -n "$urls" || { echo "::error::no template URLs found in Template.kt"; exit 1; }
 
           rc=0
@@ -73,6 +75,38 @@ jobs:
           test -n "$(ls -A UpstreamCheck)" || { echo "::error::project directory is empty"; exit 1; }
           ls -la UpstreamCheck
 
+      # The URL check above proves the archives are reachable. It does not prove kmpli can
+      # consume them, and those are not the same thing: when github.com began answering the
+      # archive redirect with a content-security-policy header around 9 KB, every URL still
+      # returned 200 while every --template run died on the curl engine's header line limit.
+      # Nothing here noticed, because nothing ran generation. This step closes that gap.
+      #
+      # Ids are read from Template.kt for the same reason the URLs are, so a template added
+      # there is covered the day it lands. Note this runs the released binary, so a failure
+      # can also mean the release predates a URL fix already merged here.
+      - name: Template generation still works
+        run: |
+          set -eu
+          ids=$(sed -nE 's/^[[:space:]]*(id = )?"([a-z][a-z0-9-]*)",.*/\2/p' \
+            composeApp/src/commonMain/kotlin/io/chornge/kmpli/Template.kt)
+          test -n "$ids" || { echo "::error::no template ids found in Template.kt"; exit 1; }
+
+          mkdir -p tpl && cd tpl
+          rc=0
+          for id in $ids; do
+            rm -rf "$id" && mkdir "$id" && cd "$id"
+            if ../../kmpli --name=TplCheck --pid=org.tpl.check --template="$id" >log.txt 2>&1 \
+              && [ -d TplCheck ] && [ -n "$(ls -A TplCheck)" ]; then
+              echo "ok    $id"
+            else
+              echo "::error::template generation failed for $id"
+              tail -5 log.txt || true
+              rc=1
+            fi
+            cd ..
+          done
+          exit $rc
+
       # Nobody watches the Actions tab of a repository that is not being pushed to, so a
       # scheduled failure would otherwise be silent. One issue per outage, not one per day.
       - name: Report a failure
@@ -94,11 +128,13 @@ jobs:
 
           Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          This job verifies two things kmpli does not control:
+          This job verifies three things kmpli does not control:
 
           - every template URL in \`Template.kt\` still returns 200
           - \`--platforms\` generation still works against kmp.jetbrains.com, using the latest
             released binary rather than a build of main
+          - \`--template\` generation still works for every template in \`Template.kt\`, which
+            covers the case where an archive is reachable but kmpli cannot consume it
 
           Check the run log to see which one failed. While this issue stays open the job will not
           file another, so close it once the cause is resolved.

@@ -60,21 +60,25 @@ from an x86_64 host, because Kotlin/Native publishes no linux-aarch64 host compi
 
 **Prerequisites (Required)**
 
-kmpli needs curl and its SSL libraries present at runtime. These are the runtime packages, not
-the development ones; the `-dev` packages are only needed to build from source.
+kmpli links curl and its TLS library statically, so neither has to be installed to run it. What
+it does need is the pieces it reaches for at runtime:
+
+- **A certificate store on Linux.** `ca-certificates` provides it. Without one, every download
+  fails verification, because the bundled TLS library has no trust store of its own. macOS and
+  Windows read theirs from the OS and need nothing.
+- **`unzip` on macOS and Linux**, to unpack the generated project. macOS ships it and most Linux
+  installs have it, but minimal container images usually do not. Windows uses the bundled
+  `tar.exe`, or PowerShell as a fallback.
+- **`curl`, for the installer only.** The launcher script downloads the binary with it. macOS and
+  Windows 10+ ship curl already.
 
 ```bash
-# macOS
-brew install curl openssl
+# macOS - nothing required; curl and unzip are already present
 
-# Linux (Debian/Ubuntu) - libcurl comes with curl
-sudo apt-get install -y ca-certificates curl
+# Linux (Debian/Ubuntu)
+sudo apt-get install -y ca-certificates unzip curl
 
-# Windows (Scoop)
-scoop install curl openssl
-
-# Windows (Chocolatey)
-choco install -y curl openssl.light
+# Windows - nothing required; curl ships with Windows 10 and later
 ```
 
 **macOS/Linux (Homebrew):**
@@ -153,8 +157,10 @@ If you prefer to build from source or need to contribute:
 **Requirements:** JDK-17+, Git, and the platform-specific dependencies below. Gradle itself comes
 from the wrapper checked into this repository, so there is no need to install it.
 
-- **macOS**: `brew install openssl curl`
-- **Linux**: `sudo apt-get install -y curl libcurl4-openssl-dev libssl-dev`
+- **macOS**: nothing beyond the above. TLS resolves against `Security.framework` from the SDK.
+- **Linux**: `sudo apt-get install -y zlib1g-dev`, which supplies the `libz.so` symlink the link
+  step resolves `-lz` against. libcurl and OpenSSL are no longer needed: ktor's klib bundles
+  prebuilt static copies and the build no longer links the system ones.
 - **Windows**: `choco install -y curl openssl.light`
 
 **Build:**
@@ -294,59 +300,75 @@ TLS verification failed for request
 SSL peer certificate or SSH remote key was not OK
 ```
 
-This means your system is missing SSL certificates or curl cannot find them.
+This means kmpli could not find a certificate store to verify against. Almost always Linux, where
+the bundled TLS library has no trust store of its own.
 
 **Solution:**
 
-1. **Install OpenSSL** (if not already installed):
+1. **Install a certificate store:**
 
    ```bash
-   # macOS
-   brew install openssl curl
+   # Linux (Debian/Ubuntu)
+   sudo apt-get install -y ca-certificates
 
-   # Linux (Debian/Ubuntu) - ca-certificates is the one that matters here
-   sudo apt-get install -y ca-certificates curl
-
-   # Windows (Scoop)
-   scoop install curl openssl
-
-   # Windows (Chocolatey - alternative)
-   choco install -y curl openssl.light
+   # Linux (Fedora/RHEL)
+   sudo dnf install -y ca-certificates
    ```
 
-2. **Verify installation**:
+   macOS and Windows read the OS trust store, so there is nothing to install there.
+
+2. **Check that a bundle exists where kmpli looks:**
 
    ```bash
-   # macOS - check if cert.pem exists
-   ls -la /etc/ssl/cert.pem
-   ls -la /opt/homebrew/etc/openssl/cert.pem  # Apple Silicon
-   ls -la /usr/local/etc/openssl/cert.pem     # Intel
+   ls -la /etc/ssl/certs/ca-certificates.crt   # Debian, Ubuntu
+   ls -la /etc/pki/tls/certs/ca-bundle.crt     # Fedora, RHEL
    ```
 
-3. **Point curl at the CA bundle explicitly.** kmpli does not search for a bundle itself; it leaves
-   certificate verification to curl, so tell curl which file to use:
+3. **Name your bundle explicitly** if it lives somewhere else. kmpli checks the usual paths on
+   Linux, but an explicit setting always wins:
 
    ```bash
    export CURL_CA_BUNDLE=/path/to/cert.pem
    kmpli --name="CMPProject" --pid="org.cmp.project"
    ```
 
-4. **macOS specific**: the released binary links against Homebrew's curl rather than the system
-   one, so make sure that is installed and current:
+4. **Which store each platform uses.** macOS verifies through `Security.framework` and Windows
+   through Schannel, both of which read the OS trust store, so a failure on either is more
+   likely a proxy or antivirus intercepting TLS than a missing certificate. Linux is the case
+   worth checking: kmpli looks for `/etc/ssl/certs/ca-certificates.crt`,
+   `/etc/pki/tls/certs/ca-bundle.crt`, `/etc/ssl/ca-bundle.pem`, `/etc/pki/tls/cacert.pem` and
+   `/etc/ssl/cert.pem`, in that order, then falls back to the `/etc/ssl/certs` directory. If your
+   store is somewhere else, name it with `CURL_CA_BUNDLE` or `SSL_CERT_FILE`.
 
-   ```bash
-   brew install curl ca-certificates
-   brew upgrade curl ca-certificates
-   ```
+   Versions up to v1.6.1 linked Homebrew's curl on macOS and needed `brew install curl`. Later
+   builds bundle their own, so that is no longer required.
 
-   Do not try to `brew link openssl`. The formula is named `openssl@3`, and it is keg-only, so
-   Homebrew leaves it unlinked deliberately and the link will fail.
+#### Linux aarch64: `libssh.so.4` not found (v1.6.1 and earlier)
+
+On a clean Debian aarch64 system the arm64 binary refuses to start:
+
+```
+kmpli: error while loading shared libraries: libssh.so.4: cannot open shared object file
+```
+
+Either upgrade kmpli, or install libssh:
+
+```sh
+sudo apt-get install -y libssh-4
+```
+
+Only the aarch64 binary was affected, and only up to v1.6.1. Those builds linked a libcurl built
+with SSH support, so the binary asked for `libssh.so.4` directly. Debian satisfies libcurl with
+libssh2 and ships no `libssh.so.4`, while Ubuntu builds libcurl against libssh and normally
+already has it, which is why the same binary ran on one and not the other. Later builds bundle
+libcurl without SSH support and no longer reference it.
 
 #### Alpine, or any other musl-based distribution
 
-kmpli's Linux binaries are linked against glibc and **cannot run on musl systems** such as Alpine.
-Building from source does not help: Kotlin/Native links against its own bundled glibc sysroot, so
-a binary compiled on Alpine would still require glibc.
+kmpli's Linux binaries are linked against glibc, so they do not run on musl **out of the box**.
+Building from source does not change that: Kotlin/Native links against its own bundled glibc
+sysroot, so a binary compiled on Alpine would still ask for glibc. Alpine's compatibility layer
+covers the gap, though, and that is the short answer below.
 
 **What it looks like.** The download succeeds, then the binary fails to start with a misleading
 message along the lines of:
@@ -362,13 +384,34 @@ ls /lib64/ld-linux-x86-64.so.2
 # No such file or directory  ->  this is the problem
 ```
 
-**What to do.** Run kmpli inside a glibc container and write the project into the current
+**What to do.** Install Alpine's glibc compatibility layer and run kmpli directly:
+
+```sh
+apk add gcompat libgcc ca-certificates
+kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
+```
+
+Three packages, each for one reason. `gcompat` provides the loader and the glibc shim, `libgcc`
+provides `libgcc_s.so.1`, and `ca-certificates` provides the trust store kmpli verifies against.
+Nothing else is needed: zlib and a BusyBox `unzip` are already in the base image. Verified on
+`alpine:latest` for both `--template` and `--platforms` generation, on x86_64 and aarch64 alike,
+and covered by CI on every push.
+
+One version note. Binaries up to v1.6.1 do not run on aarch64 musl at all: musl's loader
+rejects them with `Not a valid dynamic program`. Later builds link far less, needing nothing
+beyond zlib and glibc where v1.6.1 pulled in libcurl's whole dependency closure, and they load
+fine. x86_64 was never affected.
+
+`gcompat` is a compatibility shim rather than real glibc. If you would rather not depend on one,
+running kmpli inside a glibc container works too, and writes the project into the current
 directory:
 
 ```sh
 docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '
-  apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
-  curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+  set -e
+  apt-get update -qq && apt-get install -y -qq curl ca-certificates unzip >/dev/null
+  curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/kmpli -o /usr/local/bin/kmpli
+  chmod +x /usr/local/bin/kmpli
   kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
   chown -R '"$(id -u):$(id -g)"' /out
 '
@@ -378,8 +421,14 @@ The final `chown` matters. Everything inside the container runs as root, so with
 generated project would be owned by root on your host. The `$(id -u)` and `$(id -g)` expand on
 your machine, not inside the container.
 
-Alpine's `gcompat` package provides a glibc compatibility layer and may be enough to run the
-binary directly, but this is untested against kmpli.
+Three other details are easy to get wrong. `unzip` has to be in the install list, because kmpli
+shells out to it. The launcher is fetched directly rather than piped through `install.sh`,
+because that script installs with `sudo`, which slim images do not ship. And `set -e` is what
+makes a failure visible at all: without it the trailing `chown` succeeds regardless, so the
+container exits 0 having generated nothing.
+
+On aarch64, add `libssh-4` to the install list if you are running v1.6.1 or earlier, for the
+reason given in the `libssh.so.4` section above.
 
 #### Other Issues
 

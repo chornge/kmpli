@@ -4,7 +4,9 @@ compose-multiplatform = "1.9.0"
 detekt = "1.23.8"
 kotlin = "2.2.20"
 kotlinx-coroutines = "1.10.2"
-ktor = "3.0.1"
+# Two ktor versions, selected by host in composeApp/build.gradle.kts. See the comment there.
+ktor = "3.3.3"
+ktorWindows = "3.0.1"
 mordant = "3.0.2"
 okio = "3.6.0"
 serialization = "1.9.0"
@@ -14,8 +16,6 @@ mordant = { module = "com.github.ajalt.mordant:mordant", version.ref = "mordant"
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = { ref = "serialization" } }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-ktor-client-core = { module = "io.ktor:ktor-client-core", version = { ref = "ktor" } }
-ktor-client-curl = { module = "io.ktor:ktor-client-curl", version = { ref = "ktor" } }
 squareup-okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 
 [plugins]
