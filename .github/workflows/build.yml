@@ -259,7 +259,7 @@ jobs:
       # here. Running it in debian:stable-slim with only the documented prerequisites present is
       # what actually proves the artifact is self-sufficient. Installing exactly what the README
       # tells people to install also means the two cannot drift apart silently.
-      - name: Smoke Test (minimal container)
+      - name: Smoke Test (minimal containers)
         if: matrix.target == 'LinuxX64'
         shell: bash
         run: |
@@ -275,6 +275,23 @@ jobs:
             ./kmpli --version
             ./kmpli --name=ContainerSmoke --pid=org.container.smoke --platforms=desktop
             test -d ContainerSmoke || { echo "no ContainerSmoke directory"; exit 1; }
+          '
+
+          # And musl, through Alpine's glibc shim. The README tells musl users this works, so it
+          # has to keep working: a glibc-linked binary on musl is the one configuration where an
+          # upstream change could quietly take the platform away again. Three packages and no
+          # more: gcompat is the loader and glibc shim, libgcc is libgcc_s.so.1, ca-certificates
+          # is the trust store. zlib and a BusyBox unzip are already in the base image.
+          rm -rf smoke-alpine && mkdir smoke-alpine
+          cp "$PWD/${{ matrix.binary_path }}" smoke-alpine/kmpli
+          chmod +x smoke-alpine/kmpli
+
+          docker run --rm -v "$PWD/smoke-alpine:/out" -w /out alpine:latest sh -c '
+            set -e
+            apk add --no-cache gcompat libgcc ca-certificates >/dev/null
+            ./kmpli --version
+            ./kmpli --name=AlpineSmoke --pid=org.alpine.smoke --platforms=desktop
+            test -d AlpineSmoke || { echo "no AlpineSmoke directory"; exit 1; }
           '
 
       # Linking can succeed while producing the wrong architecture, so check explicitly.
@@ -367,6 +384,33 @@ jobs:
             ./kmpli --version
             ./kmpli --name=ContainerSmoke --pid=org.container.smoke --platforms=desktop
             test -d ContainerSmoke || { echo "no ContainerSmoke directory"; exit 1; }
+          '
+
+      # musl on aarch64 is an open question, so this is deliberately non-blocking. gcompat
+      # works on this architecture (a stock glibc aarch64 binary loads under it) and the x86_64
+      # kmpli binary runs on Alpine, but musl's loader rejects the v1.6.1 aarch64 binary with
+      # "Not a valid dynamic program". Alignment and vaddr/offset congruence both check out, so
+      # the likely cause is shape: that binary is a non-PIE ET_EXEC with four LOAD segments and
+      # a TLS segment, where a stock aarch64 binary has two and none.
+      #
+      # Whether the current build still trips it is untested, because Kotlin/Native cannot
+      # cross-compile linuxArm64 from a macOS host. This step answers that on every run without
+      # gating the branch. If it passes, drop continue-on-error and widen the Alpine note in the
+      # README beyond x86_64. If it keeps failing, musl is x86_64-only and this can be deleted.
+      - name: Smoke Test (musl container, non-blocking)
+        continue-on-error: true
+        run: |
+          set -eux
+          rm -rf smoke-alpine && mkdir smoke-alpine
+          cp kmpli.kexe smoke-alpine/kmpli
+          chmod +x smoke-alpine/kmpli
+
+          docker run --rm -v "$PWD/smoke-alpine:/out" -w /out alpine:latest sh -c '
+            set -e
+            apk add --no-cache gcompat libgcc ca-certificates >/dev/null
+            ./kmpli --version
+            ./kmpli --name=AlpineSmoke --pid=org.alpine.smoke --platforms=desktop
+            test -d AlpineSmoke || { echo "no AlpineSmoke directory"; exit 1; }
           '
 
   # Single required status check for the main branch ruleset, which requires the context

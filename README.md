@@ -365,9 +365,10 @@ libcurl without SSH support and no longer reference it.
 
 #### Alpine, or any other musl-based distribution
 
-kmpli's Linux binaries are linked against glibc and **cannot run on musl systems** such as Alpine.
-Building from source does not help: Kotlin/Native links against its own bundled glibc sysroot, so
-a binary compiled on Alpine would still require glibc.
+kmpli's Linux binaries are linked against glibc, so they do not run on musl **out of the box**.
+Building from source does not change that: Kotlin/Native links against its own bundled glibc
+sysroot, so a binary compiled on Alpine would still ask for glibc. Alpine's compatibility layer
+covers the gap, though, and that is the short answer below.
 
 **What it looks like.** The download succeeds, then the binary fails to start with a misleading
 message along the lines of:
@@ -383,8 +384,28 @@ ls /lib64/ld-linux-x86-64.so.2
 # No such file or directory  ->  this is the problem
 ```
 
-**What to do.** Run kmpli inside a glibc container and write the project into the current
-directory:
+**What to do.** Install Alpine's glibc compatibility layer and run kmpli directly:
+
+```sh
+apk add gcompat libgcc ca-certificates
+kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
+```
+
+Three packages, each for one reason. `gcompat` provides the loader and the glibc shim, `libgcc`
+provides `libgcc_s.so.1`, and `ca-certificates` provides the trust store kmpli verifies against.
+Nothing else is needed: zlib and a BusyBox `unzip` are already in the base image. Verified on
+`alpine:latest` x86_64 for both `--template` and `--platforms` generation, and covered by CI on
+every push.
+
+**This is x86_64 only.** On aarch64 the same packages do not help: musl's loader rejects the
+binary outright with `Not a valid dynamic program`. gcompat itself is fine on aarch64 and loads
+ordinary glibc binaries there, so the problem is the shape of our binary rather than the shim.
+It is a non-PIE executable with four `LOAD` segments and a `TLS` segment, where a stock aarch64
+binary has two and none. On arm64 musl, use the container below.
+
+`gcompat` is a compatibility shim rather than real glibc, and on aarch64 it is not an option at
+all. Either way, running kmpli inside a glibc container works, and writes the project into the
+current directory:
 
 ```sh
 docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '
@@ -409,9 +430,6 @@ container exits 0 having generated nothing.
 
 On aarch64, add `libssh-4` to the install list if you are running v1.6.1 or earlier, for the
 reason given in the `libssh.so.4` section above.
-
-Alpine's `gcompat` package provides a glibc compatibility layer and may be enough to run the
-binary directly, but this is untested against kmpli.
 
 #### Other Issues
 
