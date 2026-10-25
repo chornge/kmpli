@@ -60,25 +60,25 @@ from an x86_64 host, because Kotlin/Native publishes no linux-aarch64 host compi
 
 **Prerequisites (Required)**
 
-kmpli needs curl and its SSL libraries present at runtime. These are the runtime packages, not
-the development ones; the `-dev` packages are only needed to build from source.
+kmpli links curl and its TLS library statically, so neither has to be installed to run it. What
+it does need is the pieces it reaches for at runtime:
 
-On macOS and Linux it also shells out to `unzip` to unpack the generated project. macOS ships it
-and most Linux installs have it, but minimal container images usually do not. Windows uses the
-bundled `tar.exe`, or PowerShell as a fallback, so it needs nothing extra.
+- **A certificate store on Linux.** `ca-certificates` provides it. Without one, every download
+  fails verification, because the bundled TLS library has no trust store of its own. macOS and
+  Windows read theirs from the OS and need nothing.
+- **`unzip` on macOS and Linux**, to unpack the generated project. macOS ships it and most Linux
+  installs have it, but minimal container images usually do not. Windows uses the bundled
+  `tar.exe`, or PowerShell as a fallback.
+- **`curl`, for the installer only.** The launcher script downloads the binary with it. macOS and
+  Windows 10+ ship curl already.
 
 ```bash
-# macOS
-brew install curl openssl
+# macOS - nothing required; curl and unzip are already present
 
-# Linux (Debian/Ubuntu) - libcurl comes with curl
-sudo apt-get install -y ca-certificates curl unzip
+# Linux (Debian/Ubuntu)
+sudo apt-get install -y ca-certificates unzip curl
 
-# Windows (Scoop)
-scoop install curl openssl
-
-# Windows (Chocolatey)
-choco install -y curl openssl.light
+# Windows - nothing required; curl ships with Windows 10 and later
 ```
 
 **macOS/Linux (Homebrew):**
@@ -157,8 +157,10 @@ If you prefer to build from source or need to contribute:
 **Requirements:** JDK-17+, Git, and the platform-specific dependencies below. Gradle itself comes
 from the wrapper checked into this repository, so there is no need to install it.
 
-- **macOS**: `brew install openssl curl`
-- **Linux**: `sudo apt-get install -y curl libcurl4-openssl-dev libssl-dev`
+- **macOS**: nothing beyond the above. TLS resolves against `Security.framework` from the SDK.
+- **Linux**: `sudo apt-get install -y zlib1g-dev`, which supplies the `libz.so` symlink the link
+  step resolves `-lz` against. libcurl and OpenSSL are no longer needed: ktor's klib bundles
+  prebuilt static copies and the build no longer links the system ones.
 - **Windows**: `choco install -y curl openssl.light`
 
 **Build:**
@@ -298,53 +300,48 @@ TLS verification failed for request
 SSL peer certificate or SSH remote key was not OK
 ```
 
-This means your system is missing SSL certificates or curl cannot find them.
+This means kmpli could not find a certificate store to verify against. Almost always Linux, where
+the bundled TLS library has no trust store of its own.
 
 **Solution:**
 
-1. **Install OpenSSL** (if not already installed):
+1. **Install a certificate store:**
 
    ```bash
-   # macOS
-   brew install openssl curl
+   # Linux (Debian/Ubuntu)
+   sudo apt-get install -y ca-certificates
 
-   # Linux (Debian/Ubuntu) - ca-certificates is the one that matters here
-   sudo apt-get install -y ca-certificates curl
-
-   # Windows (Scoop)
-   scoop install curl openssl
-
-   # Windows (Chocolatey - alternative)
-   choco install -y curl openssl.light
+   # Linux (Fedora/RHEL)
+   sudo dnf install -y ca-certificates
    ```
 
-2. **Verify installation**:
+   macOS and Windows read the OS trust store, so there is nothing to install there.
+
+2. **Check that a bundle exists where kmpli looks:**
 
    ```bash
-   # macOS - check if cert.pem exists
-   ls -la /etc/ssl/cert.pem
-   ls -la /opt/homebrew/etc/openssl/cert.pem  # Apple Silicon
-   ls -la /usr/local/etc/openssl/cert.pem     # Intel
+   ls -la /etc/ssl/certs/ca-certificates.crt   # Debian, Ubuntu
+   ls -la /etc/pki/tls/certs/ca-bundle.crt     # Fedora, RHEL
    ```
 
-3. **Point curl at the CA bundle explicitly.** kmpli does not search for a bundle itself; it leaves
-   certificate verification to curl, so tell curl which file to use:
+3. **Name your bundle explicitly** if it lives somewhere else. kmpli checks the usual paths on
+   Linux, but an explicit setting always wins:
 
    ```bash
    export CURL_CA_BUNDLE=/path/to/cert.pem
    kmpli --name="CMPProject" --pid="org.cmp.project"
    ```
 
-4. **macOS specific**: the released binary links against Homebrew's curl rather than the system
-   one, so make sure that is installed and current:
+4. **Which store each platform uses.** macOS verifies through `Security.framework` and Windows
+   through Schannel, both of which read the OS trust store, so a failure on either is more
+   likely a proxy or antivirus intercepting TLS than a missing certificate. Linux is the case
+   worth checking: kmpli looks for `/etc/ssl/certs/ca-certificates.crt`,
+   `/etc/pki/tls/certs/ca-bundle.crt`, `/etc/ssl/ca-bundle.pem`, `/etc/pki/tls/cacert.pem` and
+   `/etc/ssl/cert.pem`, in that order, then falls back to the `/etc/ssl/certs` directory. If your
+   store is somewhere else, name it with `CURL_CA_BUNDLE` or `SSL_CERT_FILE`.
 
-   ```bash
-   brew install curl ca-certificates
-   brew upgrade curl ca-certificates
-   ```
-
-   Do not try to `brew link openssl`. The formula is named `openssl@3`, and it is keg-only, so
-   Homebrew leaves it unlinked deliberately and the link will fail.
+   Versions up to v1.6.1 linked Homebrew's curl on macOS and needed `brew install curl`. Later
+   builds bundle their own, so that is no longer required.
 
 #### Linux aarch64: `libssh.so.4` not found (v1.6.1 and earlier)
 

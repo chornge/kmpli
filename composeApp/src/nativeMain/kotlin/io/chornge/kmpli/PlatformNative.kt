@@ -59,16 +59,16 @@ actual fun Platform(): Platform = object : Platform {
                 printLine("")
                 printLine("🔧 SSL/TLS Certificate Error Detected!")
                 printLine("")
-                printLine("This usually means your system is missing SSL certificates.")
-                printLine("Please install OpenSSL:")
+                printLine("The server's certificate could not be verified.")
                 printLine("")
-                printLine("  macOS:   brew install openssl curl")
-                printLine("  Linux:   sudo apt-get install -y ca-certificates curl libcurl4-openssl-dev libssl-dev")
-                printLine("  Windows: choco install -y curl openssl.light")
+                printLine("On Linux this usually means the system trust store is missing:")
+                printLine("  sudo apt-get install -y ca-certificates   # Debian, Ubuntu")
+                printLine("  sudo dnf install -y ca-certificates       # Fedora, RHEL")
                 printLine("")
-                printLine("After installing, try running kmpli again.")
+                printLine("macOS and Windows read the system trust store directly, so a failure")
+                printLine("there is more likely a proxy or antivirus intercepting TLS.")
                 printLine("")
-                printLine("If the issue persists, you can manually set the CA bundle path:")
+                printLine("To point kmpli at a specific CA bundle instead:")
                 printLine("  export CURL_CA_BUNDLE=/path/to/cert.pem")
                 printLine("")
             }
@@ -318,10 +318,60 @@ actual fun Platform(): Platform = object : Platform {
     }
 }
 
+// ktor's Linux curl is linked against a static OpenSSL whose OPENSSLDIR is /etc/ssl, so the CA
+// file it looks for by default is /etc/ssl/cert.pem. Debian and Ubuntu never create that file:
+// ca-certificates installs /etc/ssl/certs/ca-certificates.crt and a hashed /etc/ssl/certs
+// directory instead. That curl is also built without a CA fallback, so it does not consult
+// OpenSSL's default verify paths either, and on a stock distribution every HTTPS request fails
+// verification even with ca-certificates installed. So tell it where the trust store actually is.
+//
+// Ordered by how common they are. The last entry is OpenSSL's own default, which Alpine provides.
+private val LINUX_CA_FILES = listOf(
+    "/etc/ssl/certs/ca-certificates.crt", // Debian, Ubuntu, Arch
+    "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora, RHEL, CentOS
+    "/etc/ssl/ca-bundle.pem",             // openSUSE
+    "/etc/pki/tls/cacert.pem",            // older RHEL
+    "/etc/ssl/cert.pem"                   // OpenSSL's compiled-in default
+)
+
+// A hashed certificate directory is enough on its own, and is the fallback when no single
+// bundle file exists.
+private const val LINUX_CA_DIR = "/etc/ssl/certs"
+
+// Linux only. macOS verifies through Security.framework and the Windows build uses Schannel;
+// both read the OS trust store without being told where it lives, and passing a path there
+// would override a working default with a guess.
+@OptIn(ExperimentalForeignApi::class, kotlin.experimental.ExperimentalNativeApi::class)
+private fun isLinux() = kotlin.native.Platform.osFamily == kotlin.native.OsFamily.LINUX
+
+@OptIn(ExperimentalForeignApi::class)
+private fun linuxCaFile(): String? {
+    if (!isLinux()) return null
+
+    // An explicit setting wins, so the CURL_CA_BUNDLE advice under Troubleshooting still works.
+    val fromEnv = listOf("CURL_CA_BUNDLE", "SSL_CERT_FILE")
+        .mapNotNull { getenv(it)?.toKString() }
+        .firstOrNull { it.isNotBlank() }
+
+    return fromEnv ?: LINUX_CA_FILES.firstOrNull { FileSystem.SYSTEM.exists(it.toPath()) }
+}
+
+private fun linuxCaDir(): String? =
+    if (isLinux() && FileSystem.SYSTEM.exists(LINUX_CA_DIR.toPath())) LINUX_CA_DIR else null
+
 actual fun NetClient(): HttpClient {
+    val caFile = linuxCaFile()
+    val caDir = if (caFile == null) linuxCaDir() else null
+
     return HttpClient(Curl) {
         engine {
             sslVerify = true
+
+            // Left unset on platforms that already resolve trust themselves, and when nothing
+            // was found: curl's own "peer certificate was not OK" is the right error then, and
+            // the handler for it already tells the user to install ca-certificates.
+            caFile?.let { caInfo = it }
+            caDir?.let { caPath = it }
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000

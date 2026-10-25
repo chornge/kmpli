@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with SSH support, so the binary referenced `libssh.so.4` directly, and Debian satisfies libcurl
   with libssh2 and ships no such library. The aarch64 binary wanted 24 shared libraries where
   x86_64 wanted 11, and 13 of those came from a linker closure it should never have carried
+- Every HTTPS request failed on Linux with "SSL peer certificate or SSH remote key was not OK",
+  once curl and TLS became statically linked. The bundled OpenSSL's `OPENSSLDIR` is `/etc/ssl`, so
+  the CA file it looks for is `/etc/ssl/cert.pem`, which Debian and Ubuntu never create; they ship
+  `/etc/ssl/certs/ca-certificates.crt` and a hashed `/etc/ssl/certs` directory. That curl is also
+  built without a CA fallback, so it did not consult OpenSSL's default verify paths either, and
+  verification failed even with `ca-certificates` installed. kmpli now locates the store itself,
+  checking the five standard bundle paths and falling back to the hashed directory, with
+  `CURL_CA_BUNDLE` and `SSL_CERT_FILE` taking precedence. Linux only: macOS and Windows read the
+  OS trust store through `Security.framework` and Schannel
 - The container recipe under Troubleshooting could not work as written. `install.sh` installs with
   `sudo`, which slim images do not ship, `unzip` was missing from the install list, and without
   `set -e` the trailing `chown` made the whole recipe exit 0 having generated nothing
@@ -39,6 +48,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   two versions never meet in a single compilation
 - `unzip` is now documented as a runtime dependency on macOS and Linux. kmpli has always shelled
   out to it to unpack the generated project, and this was never stated
+- curl and OpenSSL are no longer runtime requirements. Both are linked statically, so the Linux
+  binary's only non-glibc dependency is zlib and the macOS binary's is `Security.framework`. curl
+  is still needed for the installer script, which downloads the binary with it. The prerequisites
+  and the SSL/TLS troubleshooting section were rewritten accordingly, and building from source on
+  Linux now wants `zlib1g-dev` rather than `libcurl4-openssl-dev` and `libssl-dev`
+- The TLS error message no longer tells users to install OpenSSL and libcurl development packages,
+  which cannot help when both are statically linked. It now points at `ca-certificates` on Linux
+  and notes that a failure on macOS or Windows suggests TLS interception instead
 
 ### Added
 
