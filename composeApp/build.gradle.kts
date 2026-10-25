@@ -2,6 +2,26 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
 
 val host = org.jetbrains.kotlin.konan.target.HostManager.host
 
+// ktor 3.1.0 replaced the mingw curl build's Schannel backend with a bundled static OpenSSL.
+// OpenSSL finds its CA store through a path compiled in at build time, and that path does not
+// exist on Windows, so every HTTPS request fails with CURLE_PEER_FAILED_VERIFICATION no matter
+// what the user has installed. ktor exposes only sslVerify, caInfo and caPath on its Curl
+// engine, with no way to reach CURLSSLOPT_NATIVE_CA, so the Windows certificate store cannot be
+// selected from here. Windows therefore stays on the last Schannel release.
+//
+// Every other host takes 3.3.3, where the linux_arm64 libcurl is built without SSH support. The
+// 3.0.x builds reference libssh directly, which Debian does not ship, and that made the
+// published aarch64 binary unable to start there at all.
+//
+// Exactly one target is configured per host below, so the two versions never meet inside a
+// single compilation. Collapse this back to one version once Windows can use the system trust
+// store, either through a ktor engine option or by curl's native-CA support being enabled.
+val ktorVersion = if (host == org.jetbrains.kotlin.konan.target.KonanTarget.MINGW_X64) {
+    libs.versions.ktorWindows.get()
+} else {
+    libs.versions.ktor.get()
+}
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.detekt)
@@ -137,13 +157,11 @@ kotlin {
                 entryPoint = "io.chornge.kmpli.main"
                 baseName = "kmpli"
 
-                // ktor's mingw_x64 klib bundles libcurl.a, libssl.a, libcrypto.a and libz.a but,
-                // unlike its linux and osx entries, declares no linkerOpts of its own. Those
-                // archives call into the Windows crypto and socket APIs: 27 Cert*/Crypt* symbols
-                // need crypt32, and 16 WSA*/socket symbols need ws2_32. ktor 3.0.1 shipped these
-                // in its klib manifest; 3.3.3 does not, so they belong here instead. Harmless if
-                // a future Kotlin/Native or ktor starts supplying them again.
-                linkerOpts("-lcrypt32", "-lws2_32")
+                // Nothing to add while Windows is on ktor 3.0.1: its mingw klib declares
+                // "-Wl,-Bstatic -lstdc++ -static -lbcrypt -lcrypt32 -liconv -lwldap32 -lws2_32
+                // -lz" itself. ktor 3.3.3 declares no mingw linkerOpts at all, so a move to it
+                // needs "-lcrypt32" and "-lws2_32" here: its bundled archives reference 27
+                // Cert*/Crypt* symbols and 16 WSA*/socket symbols with nothing to resolve them.
             }
         }
 
@@ -154,7 +172,7 @@ kotlin {
         val commonMain by getting {
             kotlin.srcDir(generateVersionFile)
             dependencies {
-                implementation(libs.ktor.client.core)
+                implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
             }
@@ -169,7 +187,7 @@ kotlin {
         val nativeMain by creating {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.ktor.client.curl)
+                implementation("io.ktor:ktor-client-curl:$ktorVersion")
                 implementation(libs.squareup.okio)
                 implementation(libs.mordant)
             }

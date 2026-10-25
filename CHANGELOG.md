@@ -25,10 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ktor 3.0.1 to 3.3.3. Its klib bundles libcurl, OpenSSL and their closure and declares its own
-  `linkerOpts.linux=-lz`, which removes the `pkg-config --libs --static libcurl` closure, the
-  static-`libgcc.a` outline-atomics hack, and eleven of the twelve arm64 cross-compilation
-  packages from both workflows. On macOS the binary no longer links Homebrew's libcurl at all
+- ktor 3.0.1 to 3.3.3 on macOS and Linux. Its klib bundles libcurl, OpenSSL and their closure
+  and declares its own `linkerOpts.linux=-lz`, which removes the `pkg-config --libs --static
+  libcurl` closure, the static-`libgcc.a` outline-atomics hack, and eleven of the twelve arm64
+  cross-compilation packages from both workflows. On macOS the binary no longer links Homebrew's
+  libcurl at all, reaching the system trust store through `Security.framework` instead
+- Windows stays on ktor 3.0.1, selected by host in `composeApp/build.gradle.kts`. ktor 3.1.0
+  replaced the mingw curl build's Schannel backend with a bundled static OpenSSL, which looks for
+  its CA store at a path compiled in at build time that does not exist on Windows, so every HTTPS
+  request fails verification regardless of what is installed. ktor's Curl engine exposes only
+  `sslVerify`, `caInfo` and `caPath`, with no way to reach `CURLSSLOPT_NATIVE_CA`, so the Windows
+  certificate store cannot be selected from the build. One target is configured per host, so the
+  two versions never meet in a single compilation
 - `unzip` is now documented as a runtime dependency on macOS and Linux. kmpli has always shelled
   out to it to unpack the generated project, and this was never stated
 
