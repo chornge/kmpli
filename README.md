@@ -394,18 +394,17 @@ kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
 Three packages, each for one reason. `gcompat` provides the loader and the glibc shim, `libgcc`
 provides `libgcc_s.so.1`, and `ca-certificates` provides the trust store kmpli verifies against.
 Nothing else is needed: zlib and a BusyBox `unzip` are already in the base image. Verified on
-`alpine:latest` x86_64 for both `--template` and `--platforms` generation, and covered by CI on
-every push.
+`alpine:latest` for both `--template` and `--platforms` generation, on x86_64 and aarch64 alike,
+and covered by CI on every push.
 
-**This is x86_64 only.** On aarch64 the same packages do not help: musl's loader rejects the
-binary outright with `Not a valid dynamic program`. gcompat itself is fine on aarch64 and loads
-ordinary glibc binaries there, so the problem is the shape of our binary rather than the shim.
-It is a non-PIE executable with four `LOAD` segments and a `TLS` segment, where a stock aarch64
-binary has two and none. On arm64 musl, use the container below.
+One version note. Binaries up to v1.6.1 do not run on aarch64 musl at all: musl's loader
+rejects them with `Not a valid dynamic program`. Later builds link far less, needing nothing
+beyond zlib and glibc where v1.6.1 pulled in libcurl's whole dependency closure, and they load
+fine. x86_64 was never affected.
 
-`gcompat` is a compatibility shim rather than real glibc, and on aarch64 it is not an option at
-all. Either way, running kmpli inside a glibc container works, and writes the project into the
-current directory:
+`gcompat` is a compatibility shim rather than real glibc. If you would rather not depend on one,
+running kmpli inside a glibc container works too, and writes the project into the current
+directory:
 
 ```sh
 docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '

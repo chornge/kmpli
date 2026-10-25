@@ -65,17 +65,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user's machine, which is how the `libssh.so.4` gap went unnoticed
 - `Verify aarch64 Binary` now fails the build if libssh, LDAP, RTMP or GSSAPI reappear in the
   binary's `DT_NEEDED` entries
-- Alpine on x86_64 is now a documented and tested target. The README said the Linux binaries
+- Alpine is now a documented and tested target, on x86_64 and aarch64 alike. The README said the Linux binaries
   "cannot run on musl systems" and that Alpine's `gcompat` was "untested against kmpli"; both
   were wrong. `apk add gcompat libgcc ca-certificates` is enough to run kmpli directly, verified
   on `alpine:latest` x86_64 for `--template` and `--platforms` alike, and the container smoke
   test now covers it on every push so the claim cannot rot. Nothing else is needed, because zlib
   and a BusyBox `unzip` are already in the base image
-- aarch64 musl is still not supported, and is now measured rather than assumed. musl's loader
-  rejects the aarch64 binary with "Not a valid dynamic program" even though gcompat loads
-  ordinary glibc aarch64 binaries, so the cause is our binary's shape, not the shim. The arm64
-  job carries a `continue-on-error` musl step that reports on this every run without gating the
-  branch
+- aarch64 musl now works, where it did not before. musl's loader rejected the v1.6.1 aarch64
+  binary with "Not a valid dynamic program"; the current build loads and generates fine, the
+  difference being that it needs nothing beyond zlib and glibc where that one carried libcurl's
+  entire closure in `DT_NEEDED`. Both architectures are gated by a musl container step
 - `Template generation still works` in the daily `Upstream Check`, covering every template in
   `Template.kt`. The existing check proved the archives were reachable, which is not the same as
   kmpli being able to consume them, and that gap is what hid the header-limit failure for a week

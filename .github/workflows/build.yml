@@ -386,19 +386,15 @@ jobs:
             test -d ContainerSmoke || { echo "no ContainerSmoke directory"; exit 1; }
           '
 
-      # musl on aarch64 is an open question, so this is deliberately non-blocking. gcompat
-      # works on this architecture (a stock glibc aarch64 binary loads under it) and the x86_64
-      # kmpli binary runs on Alpine, but musl's loader rejects the v1.6.1 aarch64 binary with
-      # "Not a valid dynamic program". Alignment and vaddr/offset congruence both check out, so
-      # the likely cause is shape: that binary is a non-PIE ET_EXEC with four LOAD segments and
-      # a TLS segment, where a stock aarch64 binary has two and none.
+      # musl on aarch64, through Alpine's glibc shim. gcompat ships a separate aarch64 build,
+      # so this is a genuinely different check to the x86_64 Alpine leg rather than a copy of it.
       #
-      # Whether the current build still trips it is untested, because Kotlin/Native cannot
-      # cross-compile linuxArm64 from a macOS host. This step answers that on every run without
-      # gating the branch. If it passes, drop continue-on-error and widen the Alpine note in the
-      # README beyond x86_64. If it keeps failing, musl is x86_64-only and this can be deleted.
-      - name: Smoke Test (musl container, non-blocking)
-        continue-on-error: true
+      # Gated rather than assumed, because this only recently started working. musl's loader
+      # rejected the v1.6.1 aarch64 binary outright with "Not a valid dynamic program", and the
+      # difference is the link: that binary carried libcurl's entire closure in DT_NEEDED, while
+      # this one needs nothing beyond zlib and glibc. A regression that reintroduces those
+      # dependencies would plausibly take musl away again, and this is what would catch it.
+      - name: Smoke Test (musl container)
         run: |
           set -eux
           rm -rf smoke-alpine && mkdir smoke-alpine
