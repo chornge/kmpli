@@ -1,12 +1,12 @@
 {
-  "version": "1.7.0",
-  "description": "CLI tool for generating Kotlin Multiplatform projects",
+  "version": "1.7.1",
+  "description": "Unofficial CLI/TUI to create KMP projects. Native binary. No JVM. Runs in CI.",
   "homepage": "https://github.com/chornge/kmpli",
   "license": "Apache-2.0",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/chornge/kmpli/releases/download/v1.7.0/kmpli-windows-x64.exe",
-      "hash": "a454c031ad217f704b32d37f383b4c2d0730e0c2bea0f3aee7b5eadb62edc384"
+      "url": "https://github.com/chornge/kmpli/releases/download/v1.7.1/kmpli-windows-x64.exe",
+      "hash": "7b7526a14869275360c3a5685766dadb72a8594faef6a635ecb2ecfad622c926"
     }
   },
   "bin": [
