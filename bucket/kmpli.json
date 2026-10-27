@@ -1,12 +1,12 @@
 {
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Unofficial CLI/TUI to create KMP projects. Native binary. No JVM. Runs in CI.",
   "homepage": "https://github.com/chornge/kmpli",
   "license": "Apache-2.0",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/chornge/kmpli/releases/download/v1.7.2/kmpli-windows-x64.exe",
-      "hash": "36d8e6e8fa83e9a8e9fabfe03b39d448e8388f419705970c36f8ece8eaf4b047"
+      "url": "https://github.com/chornge/kmpli/releases/download/v1.7.3/kmpli-windows-x64.exe",
+      "hash": "207c154429ef8133a89b3bc37bcf0e80b2942052551f25892bdb42ba327b7c8c"
     }
   },
   "bin": [
