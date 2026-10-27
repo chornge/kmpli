@@ -334,7 +334,7 @@ jobs:
         run: |
           cat > Formula/kmpli.rb << EOF
           class Kmpli < Formula
-            desc "CLI tool for generating Kotlin Multiplatform projects"
+            desc "Create Kotlin Multiplatform projects from the terminal, no IDE or JVM"
             homepage "https://github.com/chornge/kmpli"
             version "${VERSION_NUMBER}"
             license "Apache-2.0"
@@ -375,7 +375,7 @@ jobs:
           cat > bucket/kmpli.json << EOF
           {
             "version": "${VERSION_NUMBER}",
-            "description": "CLI tool for generating Kotlin Multiplatform projects",
+            "description": "Unofficial CLI/TUI to create KMP projects. Native binary. No JVM. Runs in CI.",
             "homepage": "https://github.com/chornge/kmpli",
             "license": "Apache-2.0",
             "architecture": {
