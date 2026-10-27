@@ -69,7 +69,9 @@ class Kmpli(private val io: Platform = Platform()) {
     }
 
     private fun printHelp() {
-        io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")
+        io.printLine(
+            "Usage: kmpli --name=\"MyApp\" --pid=\"com.acme.myapp\" [--platforms=\"TARGETS\"] [--include-tests]"
+        )
         io.printLine("")
         io.printLine("Options:")
         io.printLine("  --name           Project name: letters, digits, spaces, '_' and '-'")

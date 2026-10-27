@@ -85,6 +85,28 @@ class TuiWizardFlowTest {
     }
 
     @Test
+    fun exhaustedInput_isReportedSeparatelyFromCancelling() {
+        // main exits 1 on exhausted input and 0 on a cancel, so the two must stay
+        // distinguishable. Both end the wizard with a null result.
+        val recorder = TerminalRecorder(width = 88, height = 30)
+        recorder.inputLines += listOf("1")
+        val wizard = TuiWizard(Terminal(terminalInterface = recorder), interactive = false)
+
+        assertNull(wizard.run())
+        assertTrue(wizard.wasInputExhausted, "running out of input should be recorded")
+    }
+
+    @Test
+    fun completedRun_doesNotLookLikeExhaustedInput() {
+        val recorder = TerminalRecorder(width = 88, height = 30)
+        recorder.inputLines += listOf("1", "3", "MyApp", "com.acme.app", "1", "1")
+        val wizard = TuiWizard(Terminal(terminalInterface = recorder), interactive = false)
+
+        assertEquals("library", wizard.run()?.templateId)
+        assertTrue(!wizard.wasInputExhausted, "a completed run consumed no missing input")
+    }
+
+    @Test
     fun theNumberedFallbackIsWhatRendered() {
         val (_, output) = templateRun()
         assertTrue(output.contains("Use number to select"), "expected the numbered-prompt hint")

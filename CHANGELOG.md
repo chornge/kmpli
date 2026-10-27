@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-10-26
+
+### Added
+
+- A container image, `ghcr.io/chornge/kmpli`, for `linux/amd64` and `linux/arm64`. That covers
+  Docker on macOS and Windows hosts as well, since those run Linux containers. It is Debian slim
+  plus `ca-certificates` and `unzip`, the documented Linux runtime prerequisites and nothing else;
+  curl is absent because the binary links it statically. Built from the release binaries rather
+  than from source, so the image build compiles nothing
+- The image's entrypoint is `kmpli`, so flags pass straight through. Running it with no arguments
+  and no `-it` is now a clear failure rather than a prompt nobody can answer, and the wizard is
+  still reachable with `docker run -it` and no arguments. There is deliberately no `CMD`: a
+  default of `--help` would leave no way to ask for the wizard
+
+### Fixed
+
+- The wizard exited 0 when its input ran out, having generated nothing. `docker run` without
+  `-it` hit this every time: it printed `? Choice:`, reached end of input, and reported success.
+  Running out of input and cancelling both end the wizard with no result, but they now mean
+  different things. Cancelling is still a clean exit, because it is a choice; exhausted input
+  exits 1 and says to pass flags or attach a terminal. This was never Docker-specific, and
+  `kmpli < /dev/null` in any script had the same problem
+
 ## [1.7.1] - 2026-10-26
 
 ### Removed

@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*.*.*"]
+    tags: [ "v*.*.*" ]
   workflow_dispatch:
 
 concurrency:
@@ -429,3 +429,77 @@ jobs:
 
           # Merge immediately with admin bypass (required checks don't run for manifest-only PRs)
           gh pr merge "$PR_URL" --admin --squash --delete-branch
+
+  # Published after the release exists, and deliberately last. A registry problem must not stop
+  # the binaries shipping, because the installer script, Homebrew and Scoop all consume those
+  # and none of them touch this image.
+  #
+  # Built from the release binaries rather than from source, so this job compiles nothing. The
+  # arm64 layers still run under emulation, but only apt-get and a chmod execute there.
+  publish-image:
+    name: Publish Container Image
+    needs: create-release
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release-binaries
+
+      # The Dockerfile expects both Linux binaries beside it and picks one by TARGETARCH.
+      - name: Stage the Linux binaries for the build context
+        run: |
+          set -eux
+          cp release-binaries/kmpli-linux-x64/kmpli.kexe kmpli-linux-x64
+          cp release-binaries/kmpli-linux-arm64/kmpli.kexe kmpli-linux-arm64
+
+      # The tag is the single source of the version here, the same as everywhere else in this
+      # workflow. verify-version has already refused anything that is not a tag.
+      - name: Resolve image tags
+        id: image
+        run: |
+          set -eu
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.image.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest
+
+      # The Dockerfile runs `kmpli --version` at build time, so a broken binary fails the build
+      # above. This checks the published manifest instead: that both architectures are actually
+      # in it, which a single-arch push would silently not be.
+      - name: Verify the pushed manifest covers both architectures
+        run: |
+          set -eux
+          image="ghcr.io/${{ github.repository }}:${{ steps.image.outputs.version }}"
+          docker buildx imagetools inspect "$image" > manifest.txt
+          cat manifest.txt
+          grep -q "linux/amd64" manifest.txt || { echo "::error::amd64 missing from manifest"; exit 1; }
+          grep -q "linux/arm64" manifest.txt || { echo "::error::arm64 missing from manifest"; exit 1; }

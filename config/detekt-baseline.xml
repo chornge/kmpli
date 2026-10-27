@@ -16,7 +16,6 @@
     <ID>MagicNumber:TuiWizard.kt$TuiWizard$4</ID>
     <ID>MagicNumber:TuiWizard.kt$TuiWizard$5</ID>
     <ID>MaxLineLength:Kmpli.kt$Kmpli$invalidInput("Invalid UI '$ui' for platform '$name'. Valid options: ${validUiForPlatform.joinToString(", ")}")</ID>
-    <ID>MaxLineLength:Kmpli.kt$Kmpli$io.printLine("Usage: kmpli --name=\"CMPProject\" --pid=\"org.cmp.project\" [--platforms=\"TARGETS\"] [--include-tests]")</ID>
     <ID>MaxLineLength:Kmpli.kt$Kmpli$return "https://kmp.jetbrains.com/generateKmtProject?name=${io.urlEncode(name)}&amp;id=${io.urlEncode(id)}&amp;spec=$encodedSpec"</ID>
     <ID>MaxLineLength:Kmpli.kt$Kmpli.Companion$// Valid package ID: each segment starts with lowercase letter, contains lowercase letters, digits, or underscores</ID>
     <ID>MaxLineLength:TuiWizard.kt$TuiWizard$private</ID>
