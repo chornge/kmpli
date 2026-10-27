@@ -199,64 +199,37 @@ kotlin {
             dependsOn(commonTest)
         }
 
+        val targetMainNames = mutableListOf<String>()
+        val targetTestNames = mutableListOf<String>()
+
         when (host) {
             KonanTarget.MACOS_X64 -> {
-                sourceSets.getByName("macosX64Main").dependsOn(nativeMain)
-                sourceSets.getByName("macosX64Test").dependsOn(nativeTest)
+                targetMainNames += "macosX64"; targetTestNames += "macosX64"
             }
 
             KonanTarget.MACOS_ARM64 -> {
-                sourceSets.getByName("macosArm64Main").dependsOn(nativeMain)
-                sourceSets.getByName("macosArm64Test").dependsOn(nativeTest)
-            }
-
-            KonanTarget.LINUX_X64 -> {
-                sourceSets.getByName("linuxX64Main").dependsOn(nativeMain)
-                sourceSets.getByName("linuxX64Test").dependsOn(nativeTest)
-                // linuxArm64 gets main sources only. Its tests are deliberately not wired:
-                // the aarch64 test binary cannot execute on the x86_64 build host.
-                sourceSets.getByName("linuxArm64Main").dependsOn(nativeMain)
+                targetMainNames += "macosArm64"; targetTestNames += "macosArm64"
             }
 
             KonanTarget.LINUX_ARM64 -> {
-                sourceSets.getByName("linuxArm64Main").dependsOn(nativeMain)
-                sourceSets.getByName("linuxArm64Test").dependsOn(nativeTest)
+                targetMainNames += "linuxArm64"; targetTestNames += "linuxArm64"
             }
 
             KonanTarget.MINGW_X64 -> {
-                sourceSets.getByName("mingwX64Main").dependsOn(nativeMain)
-                sourceSets.getByName("mingwX64Test").dependsOn(nativeTest)
+                targetMainNames += "mingwX64"; targetTestNames += "mingwX64"
+            }
+
+            KonanTarget.LINUX_X64 -> {
+                targetMainNames += listOf("linuxX64", "linuxArm64")
+                targetTestNames += "linuxX64"
+                // linuxArm64 gets main sources only. Its tests are deliberately not wired:
+                // the aarch64 test binary cannot execute on the x86_64 build host.
             }
 
             else -> {} // Unsupported host
         }
-    }
-}
 
-// The aarch64 test binary cannot run on the x86_64 build host, so keep it out of `allTests`.
-// Without this, `./gradlew allTests` would try to execute it and fail.
-tasks.matching { it.name == "linuxArm64Test" }.configureEach { enabled = false }
-
-val nativeTargets = listOf(
-    "MacosX64",
-    "MacosArm64",
-    "LinuxX64",
-    "LinuxArm64",
-    "MingwX64"
-)
-
-tasks.register<Copy>("copyBinariesToDist") {
-    group = "distribution"
-    description = "Copy native binaries to build/dist"
-
-    nativeTargets.forEach { target ->
-        val binaryDir = layout.buildDirectory.dir("bin/$target/releaseExecutable")
-        from(binaryDir) {
-            include("*")
-            rename { fileName ->
-                if (target.lowercase().startsWith("mingw")) fileName else fileName.removeSuffix(".kexe")
-            }
-        }
-        into(layout.buildDirectory.dir("dist/$target"))
+        targetMainNames.forEach { name -> getByName("${name}Main").dependsOn(nativeMain) }
+        targetTestNames.forEach { name -> getByName("${name}Test").dependsOn(nativeTest) }
     }
 }
