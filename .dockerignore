@@ -1,0 +1,5 @@
+# The build context only needs the two Linux release binaries, which CI stages next to the
+# Dockerfile. Everything else would just slow the build down and bust the layer cache.
+*
+!kmpli-linux-x64
+!kmpli-linux-arm64

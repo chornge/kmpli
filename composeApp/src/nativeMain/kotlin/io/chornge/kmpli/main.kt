@@ -29,7 +29,21 @@ fun main(args: Array<String>): Unit = runBlocking {
 
 private suspend fun runInteractiveMode() {
     val wizard = TuiWizard()
-    val result = wizard.run() ?: return
+    val result = wizard.run()
+
+    if (result == null) {
+        // Cancelling is a choice, so it exits 0. Running out of input is not: the wizard never
+        // had a usable stdin, so there was nothing to cancel. That happens with `docker run`
+        // and no -it, or when kmpli is launched from a script with no arguments, and reporting
+        // success there hides the fact that no project was created.
+        if (wizard.wasInputExhausted) {
+            println("Error: no input available to answer the wizard's prompts.")
+            println("Pass flags instead, or attach a terminal (docker run -it ...).")
+            println("Run 'kmpli --help' for usage.")
+            exitProcess(1)
+        }
+        return
+    }
 
     wizard.printProgress("Starting project generation...")
 

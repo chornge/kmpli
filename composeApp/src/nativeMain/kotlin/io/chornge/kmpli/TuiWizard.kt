@@ -45,6 +45,17 @@ class TuiWizard(
         }
     }
 
+    // A prompt returns null only when input is exhausted, which is not the same as a user
+    // deliberately cancelling with Escape or q. Both end the wizard with no result, but they
+    // mean different things to the caller: an abandoned wizard is a clean exit, while a wizard
+    // that never had usable input is a failure. Treating them alike made `docker run` without
+    // -it print a prompt, exit 0, and generate nothing, which reads as success.
+    private var inputExhausted = false
+
+    internal val wasInputExhausted: Boolean get() = inputExhausted
+
+    private fun StringPrompt.askOrNull(): String? = ask().also { if (it == null) inputExhausted = true }
+
     // Navigation signals
     private sealed class NavResult<out T> {
         data class Next<T>(val value: T) : NavResult<T>()
@@ -375,7 +386,7 @@ class TuiWizard(
             prompt = "  ${pink("?")} Project name",
             terminal = terminal,
             default = hint
-        ).ask() ?: return NavResult.Cancel
+        ).askOrNull() ?: return NavResult.Cancel
 
         return when (response.lowercase()) {
             "back", "b" -> NavResult.Back
@@ -403,7 +414,7 @@ class TuiWizard(
             prompt = "  ${pink("?")} Package ID",
             terminal = terminal,
             default = hint
-        ).ask() ?: return NavResult.Cancel
+        ).askOrNull() ?: return NavResult.Cancel
 
         return when (response.lowercase()) {
             "back", "b" -> NavResult.Back
@@ -524,7 +535,7 @@ class TuiWizard(
                 prompt = "  ${pink("?")} Choice",
                 terminal = terminal,
                 default = "1"
-            ).ask() ?: return null to startIndex
+            ).askOrNull() ?: return null to startIndex
 
             val index = response.toIntOrNull()?.minus(1) ?: return null to startIndex
             options.getOrNull(index) to index

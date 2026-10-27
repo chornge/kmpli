@@ -13,7 +13,7 @@ A single native binary: no IDE, no browser, no JVM.
   <img src="docs/demo.gif" alt="The kmpli interactive wizard generating a project" width="813">
 </p>
 
-### Why a CLI
+## Why a CLI
 
 [kmp.jetbrains.com](https://kmp.jetbrains.com) is the usual way to start a Kotlin Multiplatform
 project, and it works well for a person clicking through it once. kmpli covers what a web form
@@ -24,15 +24,20 @@ cannot:
   commit the command instead of documenting a sequence of clicks.
 - **Staying in the terminal.** An interactive wizard is also available.
 
-### Quick Start
+## Quick Start
 
-kmpli needs curl and its SSL libraries at runtime. Most systems already have them; see
-[Prerequisites](#installation) if the steps below fail with a TLS error.
+Install it:
 
 ```bash
-# macOS/Linux
 curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+```
 
+On Linux, `ca-certificates` and `unzip` need to be present; see
+[Prerequisites](#prerequisites). macOS and Windows need nothing.
+
+Then run it:
+
+```bash
 kmpli
 ```
 
@@ -40,25 +45,28 @@ Running `kmpli` with no arguments opens the wizard shown above. Or skip it entir
 
 ```bash
 kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios(swiftui),desktop"
-kmpli --name="MyLib" --pid="com.acme.mylib" --template="library"
 ```
 
-### Supported Platforms
+```bash
+kmpli --name="MyApp" --pid="com.acme.myapp" --template="library"
+```
 
-| OS | Architecture | Status |
-| --- | --- | --- |
-| macOS | arm64 (Apple Silicon) | Supported |
-| macOS | x86_64 (Intel) | Supported |
-| Linux | x86_64 | Supported |
-| Linux | aarch64 / arm64 | Supported |
-| Windows | x86_64 | Supported |
+## Supported Platforms
 
-Each release publishes a binary for every supported row. The Linux aarch64 binary is cross-compiled
+| OS | Architecture |
+| --- | --- |
+| macOS | arm64 (Apple Silicon) |
+| macOS | x86_64 (Intel) |
+| Linux | x86_64 |
+| Linux | aarch64 / arm64 |
+| Windows | x86_64 |
+
+Every release publishes a binary for each row. The Linux aarch64 binary is cross-compiled
 from an x86_64 host, because Kotlin/Native publishes no linux-aarch64 host compiler.
 
-### Installation
+## Installation
 
-**Prerequisites (Required)**
+### Prerequisites
 
 kmpli links curl and its TLS library statically, so neither has to be installed to run it. What
 it does need is the pieces it reaches for at runtime:
@@ -72,46 +80,76 @@ it does need is the pieces it reaches for at runtime:
 - **`curl`, for the installer only.** The launcher script downloads the binary with it. macOS and
   Windows 10+ ship curl already.
 
+macOS and Windows need nothing installed. On Debian or Ubuntu:
+
 ```bash
-# macOS - nothing required; curl and unzip are already present
-
-# Linux (Debian/Ubuntu)
 sudo apt-get install -y ca-certificates unzip curl
-
-# Windows - nothing required; curl ships with Windows 10 and later
 ```
 
-**macOS/Linux (Homebrew):**
+### Homebrew (macOS and Linux)
 
 ```bash
 brew tap chornge/kmpli https://github.com/chornge/kmpli
+```
+
+```bash
 brew install kmpli
 ```
 
-**Windows (Scoop):**
+### Scoop (Windows)
 
 ```powershell
 scoop bucket add kmpli https://github.com/chornge/kmpli
+```
+
+```powershell
 scoop install kmpli
 ```
 
-**Quick Install (curl):**
+### Docker
+
+Nothing to install. The image is published for `linux/amd64` and `linux/arm64`, which covers
+Docker on macOS and Windows hosts too, since those run Linux containers:
 
 ```bash
-# macOS/Linux
-curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+docker run --rm -v "$PWD:/out" --user "$(id -u):$(id -g)" \
+  ghcr.io/chornge/kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
+```
 
-# Windows (PowerShell)
+`-v "$PWD:/out"` is where the project lands, because generation writes to the working directory
+and `/out` is the image's. `--user` makes the result yours: everything in a container runs 
+as root otherwise, so the project would arrive root-owned.
+
+The entrypoint is `kmpli` itself, so flags pass straight through and `--help` works as usual.
+For the wizard, attach a terminal and pass no arguments:
+
+```bash
+docker run --rm -it -v "$PWD:/out" --user "$(id -u):$(id -g)" ghcr.io/chornge/kmpli
+```
+
+Without `-it` there is no terminal for the wizard to read from, so kmpli reports that and exits
+non-zero rather than printing a prompt and claiming success.
+
+### Install script
+
+macOS and Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chornge/kmpli/main/install.sh | bash
+```
+
+Windows:
+
+```powershell
 irm https://raw.githubusercontent.com/chornge/kmpli/main/install.ps1 | iex
 ```
 
-**Alternative Install (git):**
+### From a clone
 
 Clone the repository and run the installer:
 
 ```bash
 git clone https://github.com/chornge/kmpli
-cd kmpli
 ```
 
 macOS/Linux:
@@ -126,10 +164,10 @@ Windows (PowerShell):
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-The installer sets up a launcher that automatically downloads the appropriate binary for your platform on first run. No
-build required!
+The installer sets up a launcher that downloads the right binary for your platform on first run,
+so there is nothing to build.
 
-### Uninstalling
+## Uninstalling
 
 From a clone of this repository:
 
@@ -143,14 +181,14 @@ On Windows it also removes the `%USERPROFILE%\.kmpli` entry that `install.ps1` a
 
 Or remove it by hand, using whichever applies:
 
-```bash
-brew uninstall kmpli          # Homebrew
-scoop uninstall kmpli         # Scoop
-rm -f /usr/local/bin/kmpli    # curl or git installer (macOS/Linux)
-rm -rf ~/.kmpli               # launcher and cached binaries
-```
+| Installed with | Remove with |
+| --- | --- |
+| Homebrew | `brew uninstall kmpli` |
+| Scoop | `scoop uninstall kmpli` |
+| curl or git installer (macOS/Linux) | `rm -f /usr/local/bin/kmpli` |
+| Any (launcher and cached binaries) | `rm -rf ~/.kmpli` |
 
-### Building from Source (Optional)
+## Building from Source (Optional)
 
 If you prefer to build from source or need to contribute:
 
@@ -167,6 +205,9 @@ from the wrapper checked into this repository, so there is no need to install it
 
 ```bash
 chmod +x gradlew
+```
+
+```bash
 ./gradlew build
 ```
 
@@ -187,34 +228,31 @@ Then run the installer as shown above. The launcher prefers a locally built bina
 one, but it looks for that binary at a path relative to the current directory, so you only get the
 local build when you run `kmpli` from the root of this repository.
 
-### Usage
+## Usage
 
-#### Interactive Mode (Recommended)
+### Interactive Mode (Recommended)
 
-Simply run `kmpli` with no arguments to launch the interactive wizard:
+Run `kmpli` with no arguments:
 
 ```bash
 kmpli
 ```
 
-The wizard guides you through project setup with:
+It walks through template or platform choice, project name and package ID, whether to include
+sample tests, and a summary to confirm before anything is written.
 
-- Template or custom platform selection
-- Project name and package ID configuration
-- Test inclusion options
-- Summary and confirmation before generation
+Arrow keys work on terminals that support them; everywhere else it falls back to numbered
+choices.
 
-On supported terminals, use arrow keys to navigate. Otherwise, enter numbered choices.
+### Command-Line Mode
 
-#### Command-Line Mode
-
-For scripting or CI/CD pipelines, use command-line flags:
+For scripting and CI, pass flags instead:
 
 ```bash
-kmpli --name="CMPProject" --pid="org.cmp.project"
+kmpli --name="MyApp" --pid="com.acme.myapp"
 ```
 
-#### Usage Options
+### Usage Options
 
 ```
   --name TEXT       Project name. Optional, defaults to "CMPProject".
@@ -255,43 +293,43 @@ typo such as `--nameXYZ=Foo` is reported rather than silently accepted.
 **Exit codes:** `0` on success, `1` on invalid input or a failed generation. Worth relying on when
 calling kmpli from a script or CI job.
 
-To generate all the platforms (IOS with SwiftUI and Web with React/TS), with a name, project ID and with tests, run:
+Every platform, with SwiftUI for iOS and React for web, including sample tests:
 
 ```bash
-kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
+kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios(swiftui),desktop,web(react),server" --include-tests
 ```
 
-To generate only IOS (with Compose UI), Desktop, Web (with Compose UI) & Server. Exclude tests:
+A subset, all on Compose UI, without tests:
 
 ```bash
-kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="ios,desktop,web,server"
+kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="ios,desktop,web,server"
 ```
 
-To generate a template project. Shared UI or Native UI or Barebones KMP library. Pick one:
-
-```
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui"
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui"
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="library"
-```
-
-To generate platforms with the Kotlin Toolchain instead of Gradle:
+From a template, using any id from the list above:
 
 ```bash
-kmpli --name="CMPProject" --pid="org.cmp.project" --platforms="android,ios" --build-system="kotlin"
+kmpli --name="MyApp" --pid="com.acme.myapp" --template="shared-ui"
 ```
 
-To generate a template configured with the Kotlin Toolchain rather than Gradle (available for
-Shared UI and Native UI). Pick one:
+With the Kotlin Toolchain instead of Gradle:
 
-```
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="shared-ui-toolchain"
-kmpli --name="CMPProject" --pid="org.cmp.project" --template="native-ui-toolchain"
+```bash
+kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios" --build-system="kotlin"
 ```
 
-### Troubleshooting
+Both Kotlin Toolchain templates:
 
-#### SSL/TLS Certificate Errors
+```bash
+kmpli --name="MyApp" --pid="com.acme.myapp" --template="shared-ui-toolchain"
+```
+
+```bash
+kmpli --name="MyApp" --pid="com.acme.myapp" --template="native-ui-toolchain"
+```
+
+## Troubleshooting
+
+### SSL/TLS Certificate Errors
 
 If you encounter an error like:
 
@@ -307,11 +345,15 @@ the bundled TLS library has no trust store of its own.
 
 1. **Install a certificate store:**
 
-   ```bash
-   # Linux (Debian/Ubuntu)
-   sudo apt-get install -y ca-certificates
+   Debian or Ubuntu:
 
-   # Linux (Fedora/RHEL)
+   ```bash
+   sudo apt-get install -y ca-certificates
+   ```
+
+   Fedora or RHEL:
+
+   ```bash
    sudo dnf install -y ca-certificates
    ```
 
@@ -319,9 +361,16 @@ the bundled TLS library has no trust store of its own.
 
 2. **Check that a bundle exists where kmpli looks:**
 
+   Debian or Ubuntu:
+
    ```bash
-   ls -la /etc/ssl/certs/ca-certificates.crt   # Debian, Ubuntu
-   ls -la /etc/pki/tls/certs/ca-bundle.crt     # Fedora, RHEL
+   ls -la /etc/ssl/certs/ca-certificates.crt
+   ```
+
+   Fedora or RHEL:
+
+   ```bash
+   ls -la /etc/pki/tls/certs/ca-bundle.crt
    ```
 
 3. **Name your bundle explicitly** if it lives somewhere else. kmpli checks the usual paths on
@@ -329,7 +378,10 @@ the bundled TLS library has no trust store of its own.
 
    ```bash
    export CURL_CA_BUNDLE=/path/to/cert.pem
-   kmpli --name="CMPProject" --pid="org.cmp.project"
+   ```
+
+   ```bash
+   kmpli --name="MyApp" --pid="com.acme.myapp"
    ```
 
 4. **Which store each platform uses.** macOS verifies through `Security.framework` and Windows
@@ -343,7 +395,7 @@ the bundled TLS library has no trust store of its own.
    Versions up to v1.6.1 linked Homebrew's curl on macOS and needed `brew install curl`. Later
    builds bundle their own, so that is no longer required.
 
-#### Linux aarch64: `libssh.so.4` not found (v1.6.1 and earlier)
+### Linux aarch64: `libssh.so.4` not found (v1.6.1 and earlier)
 
 On a clean Debian aarch64 system the arm64 binary refuses to start:
 
@@ -363,7 +415,7 @@ libssh2 and ships no `libssh.so.4`, while Ubuntu builds libcurl against libssh a
 already has it, which is why the same binary ran on one and not the other. Later builds bundle
 libcurl without SSH support and no longer reference it.
 
-#### Alpine, or any other musl-based distribution
+### Alpine, or any other musl-based distribution
 
 kmpli's Linux binaries are linked against glibc, so they do not run on musl **out of the box**.
 Building from source does not change that: Kotlin/Native links against its own bundled glibc
@@ -388,6 +440,9 @@ ls /lib64/ld-linux-x86-64.so.2
 
 ```sh
 apk add gcompat libgcc ca-certificates
+```
+
+```sh
 kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
 ```
 
@@ -403,8 +458,14 @@ beyond zlib and glibc where v1.6.1 pulled in libcurl's whole dependency closure,
 fine. x86_64 was never affected.
 
 `gcompat` is a compatibility shim rather than real glibc. If you would rather not depend on one,
-running kmpli inside a glibc container works too, and writes the project into the current
-directory:
+the published image sidesteps the question, since it is Debian-based regardless of your host:
+
+```sh
+docker run --rm -v "$PWD:/out" --user "$(id -u):$(id -g)" \
+  ghcr.io/chornge/kmpli --name="MyApp" --pid="com.acme.myapp" --platforms="android,ios"
+```
+
+Or run kmpli in a glibc container yourself, writing the project into the current directory:
 
 ```sh
 docker run --rm -v "$PWD:/out" -w /out debian:stable-slim sh -c '
@@ -430,17 +491,17 @@ container exits 0 having generated nothing.
 On aarch64, add `libssh-4` to the install list if you are running v1.6.1 or earlier, for the
 reason given in the `libssh.so.4` section above.
 
-#### Other Issues
+### Other Issues
 
 - **Binary not found**: Make sure you've run the installer and restarted your terminal
 - **Permission denied**: On Unix systems, ensure the binary is executable: `chmod +x ~/.kmpli/bin/kmpli-*`
 - **Command not found**: Check that the install directory is in your PATH
 
-### License
+## License
 
 [Apache-2.0](LICENSE)
 
-### Acknowledgments
+## Acknowledgments
 
 - Inspired by a need to create Kotlin/Compose Multiplatform projects without the need for a GUI.
 - Thanks to the Kotlin and Compose Multiplatform communities for the support and for the resources.
