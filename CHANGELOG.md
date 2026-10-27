@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.3] - 2026-10-27
+
+### Added
+
+- Standard OCI labels on the container image: `source`, `url`, `title`, `description`, `licenses`,
+  `version` and `revision`. `source` is the one that matters on GHCR, because it is what links the
+  package to this repository rather than leaving the link inferred from whichever Actions run
+  happened to push it. `version` and `revision` are passed in by the release workflow and default
+  to `dev` and `unknown`, so a local `docker build` still produces a labelled image
+
 ## [1.7.2] - 2026-10-26
 
 ### Added

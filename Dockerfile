@@ -6,6 +6,23 @@
 # release binaries are the artifacts people actually run.
 FROM debian:stable-slim
 
+# org.opencontainers.image.source is what links the package to this repository on GHCR, which
+# makes the package page show the source and inherit its visibility rules. Without it the link
+# is only inferred from the Actions run that pushed, so it is better stated outright.
+#
+# version and revision come from the release workflow. They default to "dev" and "unknown" so a
+# local `docker build` produces a labelled image rather than an empty string.
+ARG VERSION=dev
+ARG REVISION=unknown
+
+LABEL org.opencontainers.image.source="https://github.com/chornge/kmpli" \
+      org.opencontainers.image.url="https://github.com/chornge/kmpli" \
+      org.opencontainers.image.title="kmpli" \
+      org.opencontainers.image.description="Create Kotlin Multiplatform projects from the terminal, no IDE or JVM" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}"
+
 # The documented Linux runtime prerequisites, and nothing else. ca-certificates is the trust
 # store kmpli verifies against, and unzip is what it shells out to when unpacking a project.
 # curl is deliberately absent: the binary links libcurl statically, and only the installer
