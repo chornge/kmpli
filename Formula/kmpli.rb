@@ -1,26 +1,26 @@
 class Kmpli < Formula
   desc "Create Kotlin Multiplatform projects from the terminal, no IDE or JVM"
   homepage "https://github.com/chornge/kmpli"
-  version "1.7.1"
+  version "1.7.2"
   license "Apache-2.0"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/chornge/kmpli/releases/download/v1.7.1/kmpli-macos-arm64"
-      sha256 "14f71f8f51f924927e2ac188fdb97005463976b53cc58ef00040eaf770581702"
+      url "https://github.com/chornge/kmpli/releases/download/v1.7.2/kmpli-macos-arm64"
+      sha256 "c2464b489da613093073e9cebeac59b68128622a7d2e1c902aebf8f00520c296"
     else
-      url "https://github.com/chornge/kmpli/releases/download/v1.7.1/kmpli-macos-x64"
-      sha256 "b05b9878a59f46f1ff47e8c8b6bc2f68d981d8dc4214e8510451570de16ee3be"
+      url "https://github.com/chornge/kmpli/releases/download/v1.7.2/kmpli-macos-x64"
+      sha256 "a65899f0dce518ea74dd2e2ff80025bf8400fa58a34fd90b2fb939d27cd103e5"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/chornge/kmpli/releases/download/v1.7.1/kmpli-linux-arm64"
-      sha256 "3a22338ca50556f5c0f81fb78dc6aec3260c08053f2e6870e7648a92afb64ff6"
+      url "https://github.com/chornge/kmpli/releases/download/v1.7.2/kmpli-linux-arm64"
+      sha256 "b8da90bb02daa980da13b7d36d0acf7ce3a15662e7f934b19beb5c6bc95fedb8"
     else
-      url "https://github.com/chornge/kmpli/releases/download/v1.7.1/kmpli-linux-x64"
-      sha256 "38fc37f29eef8078a5ea7a75def6cde5ff2464f848ed8a271d0eec63a90d232e"
+      url "https://github.com/chornge/kmpli/releases/download/v1.7.2/kmpli-linux-x64"
+      sha256 "6de29d867a3bf9d46ffa9f006a83f1597f3e59368b588289caff4de9db08d544"
     end
   end
 
