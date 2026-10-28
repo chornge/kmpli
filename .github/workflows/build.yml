@@ -222,6 +222,24 @@ jobs:
           test -d SmokeTest || { echo "::error::generation produced no SmokeTest directory"; exit 1; }
           ls -la
 
+          # The project has to be usable, not merely present. Placeholder rewriting read every
+          # file as UTF-8, and okio decodes that lossily rather than raising, so each binary was
+          # written back as mangled text. gradle-wrapper.jar came out corrupt and `./gradlew`
+          # failed in every project kmpli generated. This step never noticed, because checking
+          # that a directory exists says nothing about whether its contents survived.
+          wrapper=$(find SmokeTest -name gradle-wrapper.jar | head -1)
+          test -n "$wrapper" || { echo "::error::no gradle wrapper in the generated project"; exit 1; }
+          "$JAVA_HOME/bin/jar" tf "$wrapper" >/dev/null \
+            || { echo "::error::generated gradle-wrapper.jar is corrupt"; exit 1; }
+
+          # Broader net than the jar alone: U+FFFD anywhere in the tree means some file was
+          # decoded lossily, whatever its format.
+          if grep -ral "$(printf '\357\277\275')" SmokeTest 2>/dev/null | head -1 | grep -q .; then
+            echo "::error::generated files contain U+FFFD; a lossy decode has regressed"
+            grep -ral "$(printf '\357\277\275')" SmokeTest | head -5
+            exit 1
+          fi
+
       # --platforms is a materially different path from --template, not just a different URL.
       # kmp.jetbrains.com returns a zip already rooted at the project name, whereas the template
       # repositories return "<repo>-<branch>", so extraction handles the two differently. A
@@ -356,6 +374,18 @@ jobs:
           test -d SmokeTest || { echo "::error::generation produced no SmokeTest directory"; exit 1; }
           echo "--- generated ---"
           ls -la
+
+          # Same contents check as the build job. No JDK on this runner, so unzip does the
+          # verifying instead of `jar`.
+          wrapper=$(find SmokeTest -name gradle-wrapper.jar | head -1)
+          test -n "$wrapper" || { echo "::error::no gradle wrapper in the generated project"; exit 1; }
+          unzip -t "$wrapper" >/dev/null \
+            || { echo "::error::generated gradle-wrapper.jar is corrupt"; exit 1; }
+
+          if grep -ral "$(printf '\357\277\275')" SmokeTest 2>/dev/null | head -1 | grep -q .; then
+            echo "::error::generated files contain U+FFFD; a lossy decode has regressed"
+            exit 1
+          fi
 
       # The runner image has libssh, librtmp, libldap and the rest of Ubuntu's libcurl closure
       # preinstalled, so the step above passes even though the binary does not start on a clean

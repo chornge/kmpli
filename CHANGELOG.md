@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.4] - 2026-10-28
+
+### Fixed
+
+- Every binary file in a generated project was corrupted, so no generated project could be built.
+  Placeholder rewriting read each file with okio's `readUtf8()`, which decodes invalid byte
+  sequences to U+FFFD rather than raising, then wrote the result back. The `catch` meant to skip
+  binary files therefore never fired, and jars and images were rewritten as mangled text. The
+  visible symptom was `./gradlew` failing immediately in a fresh project with "Invalid or corrupt
+  jarfile", and PNG icons reporting as `data` rather than images. Files are now decoded strictly
+  and skipped when they are not text, and are only rewritten when a placeholder actually changed.
+  This affected both `--platforms` and `--template`, and every release up to v1.7.3
+
+### Added
+
+- The smoke tests now check that the generated project survived, rather than only that a directory
+  appeared. They verify `gradle-wrapper.jar` is a readable archive, and fail on a U+FFFD anywhere
+  in the tree, which catches any lossy decode regardless of file format. Checking only for the
+  directory is why the corruption above shipped through every release
+- Direct test coverage for the native platform, which previously had none: 13 tests over
+  placeholder rewriting, the directory walk, package-directory renaming and the CA probe. They run
+  against a real temporary directory rather than a fake filesystem, because the walk uses posix
+  `opendir`/`readdir`/`stat` and okio would not intercept it. The suite is now 112 tests
+
+### Changed
+
+- The filesystem helpers in `PlatformNative.kt` moved from `private` members of the anonymous
+  `Platform` object to `internal` top-level functions. Nothing about them changed, since each
+  already took every value it needed as a parameter; they were simply unreachable from a test,
+  because the only way into an anonymous object is through the interface, and those methods do
+  network and process work. That is why the code which corrupted every generated binary had no
+  direct coverage
+- `linuxCaFile` takes its candidate list, environment lookup and Linux gate as parameters. The
+  gate is the one that matters: the probe returns early off Linux, so on a macOS or Windows build
+  host every test of it would otherwise pass without executing anything
+- detekt's `TooManyFunctions.thresholdInFiles` raised to 15, matching `thresholdInClasses`.
+  Hoisting took `PlatformNative.kt` from 5 top-level functions to 12, and the existing comment
+  already explains why decomposition should not be penalised by the default
+
 ## [1.7.3] - 2026-10-27
 
 ### Added

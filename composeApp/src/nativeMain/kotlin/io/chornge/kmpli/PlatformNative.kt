@@ -148,167 +148,6 @@ actual fun Platform(): Platform = object : Platform {
         renamePackageDirectories(dirPath, pid, oldPid)
     }
 
-    private fun replaceFileContents(dirPath: String, name: String, pid: String, oldPid: String) {
-        val dir = opendir(dirPath)
-        if (dir != null) {
-            var entry = readdir(dir)
-            while (entry != null) {
-                val fname = entry.pointed.d_name.toKString()
-                if (fname != "." && fname != "..") {
-                    val fullPath = "$dirPath/$fname"
-                    val statBuf = nativeHeap.alloc<stat>()
-                    try {
-                        stat(fullPath, statBuf.ptr)
-                        if ((statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u) {
-                            replaceFileContents(fullPath, name, pid, oldPid)
-                        } else {
-                            try {
-                                val content = FileSystem.SYSTEM.read(fullPath.toPath()) { readUtf8() }
-                                    .replace(oldPid, pid)
-                                    .replace("KotlinProject", name)
-                                    .replace("KMP-App-Template", name)
-                                FileSystem.SYSTEM.write(fullPath.toPath()) { writeUtf8(content) }
-                            } catch (_: okio.IOException) {
-                                // Skip binary files that can't be read as UTF-8
-                            }
-                        }
-                    } finally {
-                        nativeHeap.free(statBuf.ptr)
-                    }
-                }
-                entry = readdir(dir)
-            }
-            closedir(dir)
-        }
-    }
-
-    private fun renamePackageDirectories(dirPath: String, pid: String, oldPid: String) {
-        // Convert package IDs to path format (e.g., "com.jetbrains.kmpapp" -> "com/jetbrains/kmpapp")
-        val oldPath = oldPid.replace('.', '/')
-        val newPath = pid.replace('.', '/')
-
-        if (oldPath == newPath) return
-
-        // Find and rename all occurrences of the old package path
-        findAndRenamePackageDirs(dirPath, oldPath, newPath)
-    }
-
-    private fun findAndRenamePackageDirs(basePath: String, oldPkgPath: String, newPkgPath: String) {
-        val dir = opendir(basePath)
-        if (dir != null) {
-            val entries = mutableListOf<String>()
-            var entry = readdir(dir)
-            while (entry != null) {
-                val fname = entry.pointed.d_name.toKString()
-                if (fname != "." && fname != "..") {
-                    entries.add(fname)
-                }
-                entry = readdir(dir)
-            }
-            closedir(dir)
-
-            for (fname in entries) {
-                val fullPath = "$basePath/$fname"
-                val statBuf = nativeHeap.alloc<stat>()
-                val isDir: Boolean
-                try {
-                    stat(fullPath, statBuf.ptr)
-                    isDir = (statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u
-                } finally {
-                    nativeHeap.free(statBuf.ptr)
-                }
-
-                if (isDir) {
-                    // Check if this directory path ends with the old package path
-                    val relativePath = fullPath.removePrefix("./")
-                    if (relativePath.endsWith(oldPkgPath)) {
-                        // Found the old package directory, rename it
-                        val newFullPath = fullPath.replace(oldPkgPath, newPkgPath)
-                        createParentDirs(newFullPath)
-                        moveDirectoryContents(fullPath, newFullPath)
-                        removeEmptyParentDirs(fullPath, oldPkgPath)
-                    } else {
-                        // Continue searching recursively
-                        findAndRenamePackageDirs(fullPath, oldPkgPath, newPkgPath)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun createParentDirs(path: String) {
-        val parentPath = path.substringBeforeLast('/')
-        if (parentPath.isNotEmpty() && parentPath != path) {
-            FileSystem.SYSTEM.createDirectories(parentPath.toPath())
-        }
-    }
-
-    private fun moveDirectoryContents(srcDir: String, destDir: String) {
-        FileSystem.SYSTEM.createDirectories(destDir.toPath())
-
-        val dir = opendir(srcDir)
-        if (dir != null) {
-            val entries = mutableListOf<String>()
-            var entry = readdir(dir)
-            while (entry != null) {
-                val fname = entry.pointed.d_name.toKString()
-                if (fname != "." && fname != "..") {
-                    entries.add(fname)
-                }
-                entry = readdir(dir)
-            }
-            closedir(dir)
-
-            for (fname in entries) {
-                val srcPath = "$srcDir/$fname".toPath()
-                val destPath = "$destDir/$fname".toPath()
-                FileSystem.SYSTEM.atomicMove(srcPath, destPath)
-            }
-        }
-    }
-
-    private fun removeEmptyParentDirs(path: String, oldPkgPath: String) {
-        // Remove empty directories up to the first segment of the old package path
-        val segments = oldPkgPath.split('/')
-        var currentPath = path
-
-        for (i in segments.indices.reversed()) {
-            val statBuf = nativeHeap.alloc<stat>()
-            val exists: Boolean
-            try {
-                exists = stat(currentPath, statBuf.ptr) == 0
-            } finally {
-                nativeHeap.free(statBuf.ptr)
-            }
-
-            if (exists) {
-                val dir = opendir(currentPath)
-                if (dir != null) {
-                    var isEmpty = true
-                    var entry = readdir(dir)
-                    while (entry != null) {
-                        val fname = entry.pointed.d_name.toKString()
-                        if (fname != "." && fname != "..") {
-                            isEmpty = false
-                            break
-                        }
-                        entry = readdir(dir)
-                    }
-                    closedir(dir)
-
-                    if (isEmpty) {
-                        rmdir(currentPath)
-                        currentPath = currentPath.substringBeforeLast('/')
-                    } else {
-                        break
-                    }
-                }
-            } else {
-                break
-            }
-        }
-    }
-
     override fun printLine(message: String) {
         println(message)
     }
@@ -326,7 +165,208 @@ actual fun Platform(): Platform = object : Platform {
 // verification even with ca-certificates installed. So tell it where the trust store actually is.
 //
 // Ordered by how common they are. The last entry is OpenSSL's own default, which Alpine provides.
-private val LINUX_CA_FILES = listOf(
+
+// Hoisted out of the Platform object so nativeTest can exercise them directly. They never
+// referenced object state, so this is a move rather than a change: each already takes every
+// value it needs as a parameter. Keeping them private inside an anonymous object meant the
+// only way in was through the interface, which does network and process work, and that is why
+// the file that corrupted every generated binary had no direct coverage.
+
+/**
+ * Rewrite placeholders in one file, leaving binary files alone.
+ *
+ * okio's readUtf8() is lossy: invalid byte sequences decode to U+FFFD rather than raising,
+ * so reading a jar or a PNG through it and writing the result back rewrites that file as
+ * mangled text. Nothing threw, so the previous catch never fired and every binary in every
+ * generated project was corrupted, gradle-wrapper.jar included, which left `./gradlew`
+ * failing with "Invalid or corrupt jarfile" in a freshly generated project.
+ *
+ * Decoding strictly is what that catch was always meant to do. The NUL check covers the
+ * remainder, because a file can be valid UTF-8 and still not be text.
+ */
+internal fun rewritePlaceholders(path: String, name: String, pid: String, oldPid: String) {
+    try {
+        val bytes = FileSystem.SYSTEM.read(path.toPath()) { readByteArray() }
+        if (bytes.any { it == 0.toByte() }) return
+
+        val text = try {
+            bytes.decodeToString(throwOnInvalidSequence = true)
+        } catch (_: CharacterCodingException) {
+            return
+        }
+
+        val updated = text
+            .replace(oldPid, pid)
+            .replace("KotlinProject", name)
+            .replace("KMP-App-Template", name)
+
+        // Only touch files that actually changed.
+        if (updated != text) {
+            FileSystem.SYSTEM.write(path.toPath()) { writeUtf8(updated) }
+        }
+    } catch (_: okio.IOException) {
+        // Unreadable or unwritable: leave the file as found.
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
+internal fun replaceFileContents(dirPath: String, name: String, pid: String, oldPid: String) {
+    val dir = opendir(dirPath)
+    if (dir != null) {
+        var entry = readdir(dir)
+        while (entry != null) {
+            val fname = entry.pointed.d_name.toKString()
+            if (fname != "." && fname != "..") {
+                val fullPath = "$dirPath/$fname"
+                val statBuf = nativeHeap.alloc<stat>()
+                try {
+                    stat(fullPath, statBuf.ptr)
+                    if ((statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u) {
+                        replaceFileContents(fullPath, name, pid, oldPid)
+                    } else {
+                        rewritePlaceholders(fullPath, name, pid, oldPid)
+                    }
+                } finally {
+                    nativeHeap.free(statBuf.ptr)
+                }
+            }
+            entry = readdir(dir)
+        }
+        closedir(dir)
+    }
+}
+
+internal fun renamePackageDirectories(dirPath: String, pid: String, oldPid: String) {
+    // Convert package IDs to path format (e.g., "com.jetbrains.kmpapp" -> "com/jetbrains/kmpapp")
+    val oldPath = oldPid.replace('.', '/')
+    val newPath = pid.replace('.', '/')
+
+    if (oldPath == newPath) return
+
+    // Find and rename all occurrences of the old package path
+    findAndRenamePackageDirs(dirPath, oldPath, newPath)
+}
+
+@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
+internal fun findAndRenamePackageDirs(basePath: String, oldPkgPath: String, newPkgPath: String) {
+    val dir = opendir(basePath)
+    if (dir != null) {
+        val entries = mutableListOf<String>()
+        var entry = readdir(dir)
+        while (entry != null) {
+            val fname = entry.pointed.d_name.toKString()
+            if (fname != "." && fname != "..") {
+                entries.add(fname)
+            }
+            entry = readdir(dir)
+        }
+        closedir(dir)
+
+        for (fname in entries) {
+            val fullPath = "$basePath/$fname"
+            val statBuf = nativeHeap.alloc<stat>()
+            val isDir: Boolean
+            try {
+                stat(fullPath, statBuf.ptr)
+                isDir = (statBuf.st_mode.toUInt() and S_IFDIR.toUInt()) != 0u
+            } finally {
+                nativeHeap.free(statBuf.ptr)
+            }
+
+            if (isDir) {
+                // Check if this directory path ends with the old package path
+                val relativePath = fullPath.removePrefix("./")
+                if (relativePath.endsWith(oldPkgPath)) {
+                    // Found the old package directory, rename it
+                    val newFullPath = fullPath.replace(oldPkgPath, newPkgPath)
+                    createParentDirs(newFullPath)
+                    moveDirectoryContents(fullPath, newFullPath)
+                    removeEmptyParentDirs(fullPath, oldPkgPath)
+                } else {
+                    // Continue searching recursively
+                    findAndRenamePackageDirs(fullPath, oldPkgPath, newPkgPath)
+                }
+            }
+        }
+    }
+}
+
+internal fun createParentDirs(path: String) {
+    val parentPath = path.substringBeforeLast('/')
+    if (parentPath.isNotEmpty() && parentPath != path) {
+        FileSystem.SYSTEM.createDirectories(parentPath.toPath())
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
+internal fun moveDirectoryContents(srcDir: String, destDir: String) {
+    FileSystem.SYSTEM.createDirectories(destDir.toPath())
+
+    val dir = opendir(srcDir)
+    if (dir != null) {
+        val entries = mutableListOf<String>()
+        var entry = readdir(dir)
+        while (entry != null) {
+            val fname = entry.pointed.d_name.toKString()
+            if (fname != "." && fname != "..") {
+                entries.add(fname)
+            }
+            entry = readdir(dir)
+        }
+        closedir(dir)
+
+        for (fname in entries) {
+            val srcPath = "$srcDir/$fname".toPath()
+            val destPath = "$destDir/$fname".toPath()
+            FileSystem.SYSTEM.atomicMove(srcPath, destPath)
+        }
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
+internal fun removeEmptyParentDirs(path: String, oldPkgPath: String) {
+    // Remove empty directories up to the first segment of the old package path
+    val segments = oldPkgPath.split('/')
+    var currentPath = path
+
+    for (i in segments.indices.reversed()) {
+        val statBuf = nativeHeap.alloc<stat>()
+        val exists: Boolean
+        try {
+            exists = stat(currentPath, statBuf.ptr) == 0
+        } finally {
+            nativeHeap.free(statBuf.ptr)
+        }
+
+        if (exists) {
+            val dir = opendir(currentPath)
+            if (dir != null) {
+                var isEmpty = true
+                var entry = readdir(dir)
+                while (entry != null) {
+                    val fname = entry.pointed.d_name.toKString()
+                    if (fname != "." && fname != "..") {
+                        isEmpty = false
+                        break
+                    }
+                    entry = readdir(dir)
+                }
+                closedir(dir)
+
+                if (isEmpty) {
+                    rmdir(currentPath)
+                    currentPath = currentPath.substringBeforeLast('/')
+                } else {
+                    break
+                }
+            }
+        } else {
+            break
+        }
+    }
+}
+
+internal val LINUX_CA_FILES = listOf(
     "/etc/ssl/certs/ca-certificates.crt", // Debian, Ubuntu, Arch
     "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora, RHEL, CentOS
     "/etc/ssl/ca-bundle.pem",             // openSUSE
@@ -342,18 +382,30 @@ private const val LINUX_CA_DIR = "/etc/ssl/certs"
 // both read the OS trust store without being told where it lives, and passing a path there
 // would override a working default with a guess.
 @OptIn(ExperimentalForeignApi::class, kotlin.experimental.ExperimentalNativeApi::class)
-private fun isLinux() = kotlin.native.Platform.osFamily == kotlin.native.OsFamily.LINUX
+internal fun isLinux() = kotlin.native.Platform.osFamily == kotlin.native.OsFamily.LINUX
 
+/**
+ * Resolve the CA bundle to hand to curl.
+ *
+ * Everything the logic depends on is a parameter so a test can drive it against temp files on
+ * any host. `onLinux` in particular: the probe is Linux-only behaviour, but the tests run on
+ * whichever machine builds, so the gate has to be injectable or the whole function is dead code
+ * off Linux and can never be exercised.
+ */
 @OptIn(ExperimentalForeignApi::class)
-private fun linuxCaFile(): String? {
-    if (!isLinux()) return null
+internal fun linuxCaFile(
+    candidates: List<String> = LINUX_CA_FILES,
+    env: (String) -> String? = { getenv(it)?.toKString() },
+    onLinux: Boolean = isLinux()
+): String? {
+    if (!onLinux) return null
 
     // An explicit setting wins, so the CURL_CA_BUNDLE advice under Troubleshooting still works.
     val fromEnv = listOf("CURL_CA_BUNDLE", "SSL_CERT_FILE")
-        .mapNotNull { getenv(it)?.toKString() }
+        .mapNotNull { env(it) }
         .firstOrNull { it.isNotBlank() }
 
-    return fromEnv ?: LINUX_CA_FILES.firstOrNull { FileSystem.SYSTEM.exists(it.toPath()) }
+    return fromEnv ?: candidates.firstOrNull { FileSystem.SYSTEM.exists(it.toPath()) }
 }
 
 private fun linuxCaDir(): String? =
